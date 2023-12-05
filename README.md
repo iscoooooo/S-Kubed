@@ -1,7 +1,4 @@
-# S-Kubed
-This repository houses MATLAB functions and Simulink files for small satellite stationkeeping. It incorporates a PI Hexapod, OptiTrack cameras, and an air-bearing in experiments. While the Simulink hub is under development for maneuver testing, it remains a valuable resource for ongoing research and engineering in satellite dynamics.
-
-# Small Satellite Stationkeeping Maneuvers: Simulations & Experiments
+# Small Satellite Stationkeeping: *S-Kubed*
 
 This repository houses a comprehensive approach to designing and executing stationkeeping maneuvers tailored for small satellites, including cubesats and Eyassats. The project combines both numerical simulations in MATLAB and experimental procedures conducted in the state-of-the-art Small Satellite lab environment.
 
@@ -20,6 +17,6 @@ An ongoing section dedicated to creating and developing the Simulink hub. This h
 Regularly updated documentation detailing project progress, methodologies, experimental results, and insights gained throughout the development and testing phases.
 
 ## Purpose
-This repository serves as a valuable resource for the small satellite community, offering insights into both theoretical simulations and practical experimentation methodologies for stationkeeping maneuvers. It aims to facilitate collaboration, knowledge sharing, and advancements in maneuver design and execution for small satellites.
+This repository is part of an undergraduate senior project, under the Aerospace Engineering department at Cal Poly Pomona, dedicated to the design and execution of stationkeeping maneuvers tailored for small satellites like cubesats and Eyassats. It combines both numerical simulations in MATLAB and experimental procedures conducted in the state-of-the-art Small Satellite lab environment.
 
-Feel free to contribute, provide feedback, or use this repository for research and development in the field of small satellite stationkeeping maneuvers.
+The project aims to provide a comprehensive resource for the small satellite community, offering insights into theoretical simulations and practical experimentation methodologies for stationkeeping maneuvers. It seeks to showcase the integration of academia and hands-on experimentation by bridging theoretical knowledge with real-world applications for small satellite maneuver optimization.
