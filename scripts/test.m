@@ -1,7 +1,16 @@
+% This is a test script that extracts rigid body data from a csv output 
+% file from Motive and plots the cartesian coordinates over time, and 
+% shows an animation of the attitude variation over time.
+
 clc;clear;close all
 
-% File to be read
-filespec = 'C:\Users\Francisco\Documents\MATLAB\S-Kubed\data\test.csv';
+%% EDIT %%
+fileName = 'test.csv'; % specify file name from the data folder
+
+%% DO NOT EDIT %%
+
+% Get file from the data folder path
+filespec = "../data/" + fileName;
 
 % Extract quaternions and cartesian coords at each sample frame/time
 [frame,time,quat,pos] = statereader(filespec);
