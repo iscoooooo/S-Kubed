@@ -1,7 +1,7 @@
 clc;clear;close all
 
 % File to be read
-filespec = 'C:\Users\Francisco\Documents\MATLAB\S-Kubed\data\test.csv';
+filespec = 'C:\Users\user\Desktop\Github\S-Kubed\data\test.csv';
 
 % Extract quaternions and cartesian coords at each sample frame/time
 [frame,time,quat,pos] = statereader(filespec);
