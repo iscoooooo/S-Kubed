@@ -2,6 +2,8 @@
 % file from Motive and plots the cartesian coordinates over time, and
 % shows an animation of the attitude variation over time.
 
+% changes need to be made to match tracking volume
+
 clc;clear;close all
 
 %% EDIT %%
