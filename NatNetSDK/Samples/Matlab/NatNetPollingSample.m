@@ -25,7 +25,7 @@ function NatNetPollingSample
 
 	% create an instance of the natnet client class
 	fprintf( 'Creating natnet class object\n' )
-	natnetclient = natnet;
+	natnetclient = natnet();
 
 	% connect the client to the server (multicast over local loopback) -
 	% modify for your network

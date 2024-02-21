@@ -41,7 +41,7 @@ function markerData = receiveOptiTrackData()
 	fprintf( 'Connecting to the server\n' )
 
     % Set the server IP address and port
-    serverIP = '';           % Use the IP address of  Motive computer
+    serverIP = '127.0.0.1';           % Use the IP address of  Motive computer
     serverPort = 1510;       % Use the port number configured in Motive
     client.Initialize(serverIP, serverPort);
 
