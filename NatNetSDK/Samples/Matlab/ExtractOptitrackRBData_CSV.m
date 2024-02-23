@@ -1,6 +1,6 @@
 % -----------------------MATLAB Script Information----------------------
 %{
-Written by: Francisco Sanudo
+Written by: Simulink Team
 Date: 2/10/23
 
 PURPOSE
@@ -29,8 +29,6 @@ User-defined functions         : saveToCSV (nested)
 
 function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
     ExtractOptitrackRBData_CSV(csvFileName, numFrames)
-
-    % fRAMES - Set the number of frames you want to capture
         
     fprintf('NatNet Polling Sample Start\n')
 
