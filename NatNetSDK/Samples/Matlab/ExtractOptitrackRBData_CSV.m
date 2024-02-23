@@ -1,10 +1,36 @@
-% Optitrack Matlab / RigidBody Polling
-% ...
+% -----------------------MATLAB Script Information----------------------
+%{
+Written by: Francisco Sanudo
+Date: 2/10/23
 
-function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ExtractOptitrackRBData_CSV(csvFileName, ...
-    numFrames)
+PURPOSE
+This function stores frame, time, and  rigid body data streamed from motive 
+using the natnet wrapper class and also outputs the data to a CSV file.
 
-    % NUMfRAMES - Set the number of frames you want to capture
+REFERENCES
+Solving Sets of Linear Algebraic Equations (notes), P. Nissenson
+
+INPUTS
+- numFrames   : Number of frame desired for capture 
+- csvFileName : Name of the CSV file to send output
+
+OUTPUTS
+- rigidbodyX :
+- rigidBodyY :
+- rigidBodyZ :
+- frameData  :
+- timeData   :
+
+OTHER
+.m files required              : natnet.m
+Files required (not .m)        : none
+User-defined functions         : saveToCSV (nested)
+%}
+
+function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
+    ExtractOptitrackRBData_CSV(csvFileName, numFrames)
+
+    % fRAMES - Set the number of frames you want to capture
         
     fprintf('NatNet Polling Sample Start\n')
 
