@@ -2,7 +2,7 @@ clear;clc
 
 % %%%% EDITABLE %%%%%%%
 numFrames = 10;
-csvFileName = 'run';
+csvFileName = 'quatTest';
 
 % %%% DO NOT EDIT %%%%%%
 

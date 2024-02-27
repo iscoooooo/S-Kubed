@@ -108,10 +108,10 @@ function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
             fprintf('Y:%0.1fmm  ', rigidBodyY(idx, i))
             fprintf('Z:%0.1fmm\n', rigidBodyZ(idx, i))
             fprintf('           ')
-            fprintf('qX:%0.1f   ', rigidBodyqX(idx, i))
+            fprintf('       qX:%0.1f   ', rigidBodyqX(idx, i))
             fprintf('qY:%0.1f   ', rigidBodyqY(idx, i))
             fprintf('qZ:%0.1f   ', rigidBodyqZ(idx, i))
-            fprintf('qW:%0.1f   ', rigidBodyqW(idx, i))
+            fprintf('qW:%0.1f   \n', rigidBodyqW(idx, i))
         end
     end
 
@@ -134,13 +134,13 @@ function saveToCSV(csvFileName,frameData, timeData, rigidBodyNames, ...
         dataTable.('rigidBody_X') = rigidBodyX(:, i);
         dataTable.('rigidBody_Y') = rigidBodyY(:, i);
         dataTable.('rigidBody_Z') = rigidBodyZ(:, i);
-        dataTable.('rigidBody_X') = rigidBodyqX(:, i);
-        dataTable.('rigidBody_Y') = rigidBodyqY(:, i);
-        dataTable.('rigidBody_Z') = rigidBodyqZ(:, i);
-        dataTable.('rigidBody_Z') = rigidBodyqW(:, i);
+        dataTable.('rigidBody_qX') = rigidBodyqX(:, i);
+        dataTable.('rigidBody_qY') = rigidBodyqY(:, i);
+        dataTable.('rigidBody_qZ') = rigidBodyqZ(:, i);
+        dataTable.('rigidBody_qW') = rigidBodyqW(:, i);
     end
 
     % Write data to CSV file
-    writetable(dataTable, csvFileName);
+    writetable(dataTable, csvFileName,'WriteVariableNames',true);
     fprintf('Data saved to %s\n', csvFileName);
 end
