@@ -42,6 +42,16 @@ disp('Controller Connected')
 
 %% Hexapod Movement Function
 
+% C887 passes the controller from the workspace to the function.
+% -- 'simulationBool' shows a quick simulation of the hexapod with fluid
+% movements.
+% -- 'iterations' is the amount of iterations for the simulation.
+% -- 'centerBool' centers the hexapod if need be.
+% -- 'movement' allows the user to enter desired axes of movement:
+% ---- Up to 3 axes of movement
+% ---- Displays maximum movement in desired axes, positive and negative.
+% ---- Executes movement, then returns to 0 position 5 seconds after.
+
 hexsim(C887, false, 1, 1, false, true)
 
 function hexsim(C887, simulationBool, iterations, centerBool, movement)
@@ -145,7 +155,7 @@ while true
         elseif length(axes) == 1
             C887.MOV(axes(1), movements(1));
         end
-        pause(3)
+        pause(5)
         if length(axes) == 4
             C887.MOV(axes(1), 0);
             C887.MOV(axes(2), 0);
