@@ -1,7 +1,7 @@
 clear;clc;close all
 
 % %%%% EDITABLE %%%%%%%
-numFrames = 100;
+numFrames = 200;
 csvFileName = 'eulerTest';
 
 % %%% DO NOT EDIT %%%%%%
