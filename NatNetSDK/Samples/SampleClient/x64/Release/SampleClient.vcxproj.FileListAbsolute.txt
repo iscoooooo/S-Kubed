@@ -1,1 +1,0 @@
-M:\npoint\apps\NatNet\NatNetSDK\Samples\SampleClient\x64\Release\SampleClient.vcxproj.AssemblyReference.cache
