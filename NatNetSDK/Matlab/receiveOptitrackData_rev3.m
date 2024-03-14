@@ -107,8 +107,8 @@ for idx = 1:numFrames
         return
     end
 
-    frameData(idx) = data.iFrame;
-    timeData(idx) = data.fTimestamp;
+    frameData(idx) = idx;
+    timeData(idx) = data.fTimestamp - timeData(1);
 
     fprintf('Frame:%6d  ', frameData(idx))
     fprintf('Time:%0.2f\n', timeData(idx))
@@ -122,12 +122,14 @@ for idx = 1:numFrames
         % Quaternions
         q = quaternion(data.RigidBodies(i).qw, data.RigidBodies(i).qx, ...
             data.RigidBodies(i).qy, data.RigidBodies(i).qz);
+        qRot = quaternion( 0, 0, 0, 1);
+        q = mtimes( q, qRot);
         % Convert quaternion to Euler angles using 3-2-1 sequence
         eulerAngles = q.EulerAngles('ZYX');
         % Extract Euler angles
-        rigidBodyRoll(idx, i) = eulerAngles(1)*180/pi;
-        rigidBodyPitch(idx, i) = eulerAngles(2)*180/pi;
-        rigidBodyYaw(idx, i) = eulerAngles(3)*180/pi;
+        rigidBodyRoll(idx, i) = eulerAngles(1)* -180/pi;
+        rigidBodyPitch(idx, i) = eulerAngles(2)* 180/pi;
+        rigidBodyYaw(idx, i) = eulerAngles(3)* -180/pi;
 
         % Command Window Output
         fprintf('Name:"%s"  ', rigidBodyNames{i})
@@ -146,9 +148,18 @@ for idx = 1:numFrames
         set(anglePlotRoll, 'XData', 1:numFrames, 'YData', rigidBodyRoll(:,1)');
         set(anglePlotPitch, 'XData', 1:numFrames, 'YData', rigidBodyPitch(:,1)');
         set(anglePlotYaw, 'XData', 1:numFrames, 'YData', rigidBodyYaw(:,1)');
+        
+        % Dynamically move the axis of the graph
+        subplot(2,1,1)
+        axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -500 , 500 ] );
+
+        subplot(2,1,2)
+    	axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -180 , 180 ] );
         drawnow;
     end
 end
+
+timeData(1) = 0;
 
 disp('NatNet Polling Sample End')
 
