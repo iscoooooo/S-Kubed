@@ -1,5 +1,5 @@
 %% S-Kubed Hexapod Interfacing
-% Last Revised: 3/7/24
+% Last Revised: 4/14/24
 % Andre Turpin
 
 
@@ -73,10 +73,6 @@ end
 old_axes = input_axes;
 
 while strcmp(switch_status, 'On')
-
-
-% condition = C887.qPOS <= 0.2 | C887.qPOS >= -0.2; % Condition to check
-% condition = all(C887.qPOS <= 0.2 & C887.qPOS >= -0.2); % Condition to check
 
 if all(C887.qPOS <= 0.2 & C887.qPOS >= -0.2)
     disp('Hexapod is at the origin')
