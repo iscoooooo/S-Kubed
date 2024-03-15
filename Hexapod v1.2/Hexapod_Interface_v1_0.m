@@ -20,13 +20,22 @@ slider_max = 10;
 pause(3) % Wait for app to load
 
 %~~~~~~~~~~~~~~~~ Check & Connect to Hexapod ~~~~~~~~~~~~~~~~%
+disp('Checking connection with Hexapod...');
+pause(1)
 
-if exist('C887','var') % Try using 'var'
+if exist('C887','var') 
     disp('The hexapod is connected.');
+
+    app.Lamp_3.Color = [0,1,0]; % Set lamp color to green
 else
+
     disp('The hexapod is not connected');
     run("Connection2Hexapod.m");
-    disp('Initializing connection to Hexapod')
+    disp('Initializing connection to Hexapod...');
+    pause(2)
+
+    disp('Hexapod is now connected');
+    app.Lamp_3.Color = [1,0,0];
 end
 
 
@@ -36,6 +45,7 @@ while button_status ~= true
 
     disp('Waiting to Center Hexapod')
     pause(2)
+
 end
 
 if button_status == true
@@ -63,6 +73,20 @@ end
 old_axes = input_axes;
 
 while strcmp(switch_status, 'On')
+
+
+% condition = C887.qPOS <= 0.2 | C887.qPOS >= -0.2; % Condition to check
+% condition = all(C887.qPOS <= 0.2 & C887.qPOS >= -0.2); % Condition to check
+
+if all(C887.qPOS <= 0.2 & C887.qPOS >= -0.2)
+    disp('Hexapod is at the origin')
+    app.Lamp_2.Color = [0,1,0]; %Set lamp to green
+else
+    disp('Hexapod is not at the origin')
+    app.Lamp_2.Color = [1,0,0]; %Set lamp to red
+end
+
+
 
 
     input_axes = sort(input_axes);
