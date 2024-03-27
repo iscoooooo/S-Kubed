@@ -1,0 +1,2236 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?><mscript xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd"><version>23.2</version><release>2023b</release><date>2024-02-20</date><cell><count>1</count><mcode>% Copyright © 2019 Naturalpoint
+%	Not for Redistribution
+%	NatNet Matlab Class
+%	Requires Matlab 2019a or later
+%	This class is a wrapper for the NatNetML assembly and controls the
+%	connection and communication between the OptiTrack NatNet Server and
+%	Matlab clients.
+%	Public Properties:
+%		ClientIP - The IP address of the client network.
+%		ConnectionType - Multicast of Unicast
+%		HostIP - The IP address of the host/server network.
+%		IsReporting - state of commandline reporting
+%		IsConnected - state of connection to server, updated only when
+%					establishing a connection. (Read-only)
+%		Mode - state of the Motive server, Live or Edit. (Read-Only)
+%		Version - version number of the natnet libraries. (Read-Only)
+%		FrameRate - sampling rate of the Motive hardware. (Read-Only)
+%	Public Methods:
+%		natnet - Object Constructor
+%		connect - Establish a connection to an OptiTrack NatNet Server
+%		disconnect - Close a connection to an OptiTrack NatNet Server
+%		addlistener - Links a callback function to the server stream.
+
+%		getFrameRate - Returns the server Frame Rate.
+%		getModelDescription - Returns a structure of the asset list.
+%		getFrame - Returns the latest frame of mocap data.
+
+%		getFrameMetaData - Returns last frame of meta data within mocap
+%			frame. Return value is a Matlab struct
+%		getFrameMarkerSet - Returns the last frame of MarkerSet data
+%			within mocap frame. Return value is a Matlab struct
+%		getFrameLabeledMarker - Returns the last frame of LabeledMarker
+%			data within the mocap frame. Return value is a Matlab
+%			struct.
+
+%		getMode - Returns the state of the server: Live or Edit mode.
+%		enable - Enables execution of a linked callback function.
+%		disable - Disabled execution of a linked callback function.
+%		Server Commands
+%		startRecord - Starts a recording on the server.
+%		stopRecord - Stops a recording on the server.
+%		cycleRecord - Loops recording.
+%		liveMode - Changes the server to Live mode.
+%		editMode - Changes the server to Edit mode.
+%		startPlayback - Starts playback of the server in Edit mode.
+%		stopPlayback - Stops playback of the server in Edit mode.
+%		setPlaybackStartFrame - Sets the playback loop start frame.
+%		setPlaybackEndFrame - Sets the playback loop end frame.
+%		setPlaybackLooping - Sets playback to loop.
+%		setPlaybackCurrentFrame - Sets the current frame in Edit mode.
+%		setTakeName - Sets the pending (to be recorded) take name.
+%		setPlaybackTakeName - Opens a recorded take in Edit mode.
+%		setCurrentSession - Changes the current folder in Edit mode.
+%		delete - Destructor for the natnet class
+
+classdef natnet &lt; handle
+	properties ( Access = public )
+		ClientIP
+		ConnectionType
+		HostIP
+		IsReporting
+	end % properties ( Access = public )
+
+
+	properties ( SetAccess = private )
+		IsConnected
+		Mode
+		Version
+		FrameRate
+	end % properties ( SetAccess = private )
+
+
+	properties ( Access = private )
+		Assembly
+		AssemblyPath
+		AssemblyVersion
+		Client
+		IsAssemblyLoaded
+		LastAssemblyPathFile
+		MaxListeners
+		Listener
+		CReattempt
+	end % properties ( Access = private )
+
+
+	properties ( Access = private , Dependent = true )
+		iConnectionType
+	end % properties ( Access = private , Dependant = true )
+
+
+	methods
+		function set.HostIP( obj , val )
+			validIP = obj.checkip( val);
+			if ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.HostIP = validIP;
+				obj.report( [ 'set host ip address: ' , validIP ] )
+			end
+		end % set.HostIP
+
+
+		function set.ClientIP( obj , val )
+			validIP = obj.checkip( val );
+			if ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.ClientIP = validIP;
+				obj.report( [ 'set client ip address: ' , validIP ] )
+			end
+		end % set.ClientIP
+
+
+		function set.ConnectionType( obj , val )
+			obj.disconnect
+			if ( strcmpi( 'Multicast' , val ) == 1 )
+				obj.ConnectionType = 'Multicast';
+				obj.report( 'set multicast' )
+			elseif ( strcmpi( 'Unicast' , val ) == 1 )
+				obj.ConnectionType = 'Unicast';
+				obj.report( 'set unicast' )
+			else
+				obj.report( 'invalid connection type' )
+			end
+		end % set.ConnectionType
+
+
+		function set.IsReporting( obj , val )
+			if ( val == 1 )
+				obj.IsReporting = 1;
+				obj.report( 'reporting enabled' )
+			elseif ( val == 0 )
+				obj.report( 'reporting disabled' )
+				obj.IsReporting = 0;
+			end
+		end % set.IsReporting
+
+
+		function iconnectiontype = get.iConnectionType( obj )
+			if ( strcmpi( 'Multicast' , obj.ConnectionType ) == 1 )
+				iconnectiontype = 0;
+			elseif ( strcmpi( 'Unicast' , obj.ConnectionType ) == 1 )
+				iconnectiontype = 1;
+			end
+		end % iconnectiontype
+	end % methods ( property set and get methods)
+
+
+	methods ( Access = public  )
+		function obj = natnet(  )
+			obj.getLastAssemblyPath
+			obj.MaxListeners = 255;
+			obj.Listener{ obj.MaxListeners , 1 } = [ ];
+			obj.FrameRate = 0;
+			obj.IsAssemblyLoaded = 0;
+			obj.IsConnected = 0;
+			obj.IsReporting = 0;
+			obj.CReattempt = 1;
+			obj.HostIP = '127.0.0.1';
+			obj.ClientIP = '127.0.0.1';
+			obj.ConnectionType = 'Multicast';
+			obj.Version = ' ';
+			obj.Mode = ' ';
+		end % natnet - constructor
+
+
+		function connect( obj )
+			obj.disconnect
+			obj.getAssemblies
+			if ( obj.IsAssemblyLoaded == 0 )
+				if ( isempty( obj.AssemblyPath ) )
+					obj.setAssemblyPath
+					obj.addAssembly
+					obj.getAssemblies
+				else
+					obj.addAssembly
+					obj.getAssemblies
+				end
+			end
+			if ( obj.IsAssemblyLoaded == 0 )
+				report( obj , 'natnetml assembly is missing or undefined' )
+				return
+			end
+			try
+				obj.Client = NatNetML.NatNetClientML( obj.iConnectionType );
+				v = obj.Client.NatNetVersion(  );
+				obj.Version = sprintf( '%d.%d.%d.%d', v( 1 ) , v( 2 ) , v( 3 ) , v( 4 ) );
+				if  ( isempty( obj.Client ) == 1 || obj.IsAssemblyLoaded == 0 )
+					obj.report( 'client object invalid' )
+					return
+				else
+					obj.report( [ 'natnet version: ' , obj.Version ] )
+				end
+				flg = obj.Client.Initialize( obj.ClientIP , obj.HostIP );
+				if flg == 0
+					obj.report( 'client initialized' )
+				else
+					obj.report( 'initialization failed' )
+					obj.IsConnected = 0;
+					return
+				end
+			catch exception
+				rethrow(exception)
+			end
+
+			[ ~ , rc] = obj.Client.SendMessageAndWait( 'FrameRate' );
+			if rc == 0
+				obj.IsConnected = 1;
+				obj.getFrameRate
+				obj.getMode
+				obj.getModelDescription;
+				return
+			elseif( rc == 1 )
+				obj.report( 'connection failed due to an internal error' )
+			elseif ( rc == 2 )
+				obj.report( 'connection failed due to an external error' )
+			elseif ( rc == 3 )
+				obj.report( 'connection failed due to a network error' )
+			else
+				obj.report( 'connection failed due to an unknown error' )
+			end
+			obj.IsConnected = 0;
+		end % connect
+
+
+		function addlistener( obj , aListenerIndex , functionhandlestring )
+			if ~isnumeric( aListenerIndex ) || aListenerIndex &lt; 1 || aListenerIndex &gt; obj.MaxListeners
+				obj.report( 'invalid index' );
+				return
+			end
+
+			if isa( functionhandlestring , 'char' ) &amp;&amp; ~isempty( which( functionhandlestring ) )
+				functionhandle = str2func ( [ '@( src , evnt)' , functionhandlestring , '( src , evnt)' ] );
+
+				if ~isa( obj.Listener{ aListenerIndex , 1 } , 'event.listener' )
+					obj.report( [ 'adding listener in slot:' , num2str(aListenerIndex ) ] );
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client , 'OnFrameReady2' , functionhandle );
+					obj.disable( aListenerIndex );
+				elseif isa( obj.Listener{ aListenerIndex , 1 } , 'event.listener' )
+					obj.report( [ 'replacing listener in slot: ' , num2str(aListenerIndex ) ] )
+					obj.disable( aListenerIndex )
+					delete( obj.Listener{ aListenerIndex , 1 } )
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client, 'OnFrameReady2' , functionhandle );
+					obj.disable ( aListenerIndex )
+				end
+			else
+				obj.report( [ 'invalid function set for slot: ' , num2str( aListenerIndex ) ] )
+				return
+			end
+		end % addlistener
+
+
+		function getFrameRate( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( 'FrameRate' );
+			if rc == 0
+				bytearray = uint8( bytearray );
+				obj.FrameRate =  typecast( bytearray , 'single' );
+				obj.report( [ 'frame rate: ' , num2str( obj.FrameRate ) , ' fps' ] )
+			else
+				obj.FrameRate = 0;
+			end
+		end % getFrameRate
+
+
+		function modelDescription = getModelDescription( obj )
+			if ( obj.IsConnected == 1 )
+				dataDescriptions = obj.Client.GetDataDescriptions(  );
+				modelDescription.TrackingModelCount = dataDescriptions.Count;
+				report( obj , [ 'number of trackables: ' , num2str( dataDescriptions.Count ) ] )
+				modelDescription.MarkerSetCount = 0;
+				modelDescription.RigidBodyCount = 0;
+				modelDescription.SkeletonCount = 0;
+				modelDescription.ForcePlateCount = 0;
+				modelDescription.DeviceCount = 0;
+				modelDescription.CameraCount = 0;
+
+				for i = 1 : modelDescription.TrackingModelCount
+					descriptor = dataDescriptions.Item( i - 1 );
+					% marker sets
+					if ( descriptor.type == 0)
+						modelDescription.MarkerSetCount = modelDescription.MarkerSetCount + 1;
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Name = char( descriptor.Name );
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).MarkerCount = descriptor.nMarkers;
+						for k = 1 : descriptor.nMarkers
+							modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Markers( k ).Label = char( descriptor.MarkerNames( k ) );
+						end
+					% rigid bodies
+					elseif ( descriptor.type == 1 )
+						modelDescription.RigidBodyCount = modelDescription.RigidBodyCount + 1;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Name = char( descriptor.Name );
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ID = descriptor.ID ;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ParentID = descriptor.parentID;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Type = descriptor.type;
+					% skeletons
+					elseif ( descriptor.type == 2 )
+						modelDescription.SkeletonCount = modelDescription.SkeletonCount + 1;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).Name = char( descriptor.Name );
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).ID = descriptor.ID;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount = descriptor.nRigidBodies;
+						for k = 1 : modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Name = char( descriptor.RigidBodies( k ).Name );
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ID = descriptor.RigidBodies( k ).ID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ParentID = descriptor.RigidBodies( k ).parentID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetX = descriptor.RigidBodies( k ).offsetx;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetY = descriptor.RigidBodies( k ).offsety;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetZ = descriptor.RigidBodies( k ).offsetz;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Type = descriptor.RigidBodies( k ).type;
+						end
+					elseif ( descriptor.type == 3 )
+						modelDescription.ForcePlateCount = modelDescription.ForcePlateCount + 1;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Serial = char( descriptor.Serial );
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ID = descriptor.ID;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Width = descriptor.Width;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Length = descriptor.Length;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.X = descriptor.OriginX;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Y = descriptor.OriginY;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Z = descriptor.OriginZ;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CalibrationMatrix = descriptor.CalMatrix;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount = descriptor.Corners.Length;
+						for i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount/3
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).X = descriptor.Corners( i*3-2 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Y = descriptor.Corners( i*3-1 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Z = descriptor.Corners( i*3 );
+						end
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).PlateType = descriptor.PlateType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelDataType = descriptor.ChannelDataType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount = descriptor.ChannelCount;
+						for i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Channel( i ).Name = char( descriptor.ChannelNames( i ) );
+						end
+					elseif (descriptor.type == 4)
+						modelDescription.DeviceCount = modelDescription.DeviceCount + 1;
+					elseif (descriptor.type == -1 || descriptor.type == 5)
+						modelDescription.CameraCount = modelDescription.CameraCount + 1;
+					else
+						report( obj , 'invalid asset type' )
+					end
+				end
+				report( obj , [ 'number of markersets: ' , num2str( modelDescription.MarkerSetCount ) ] )
+				report( obj , [ 'number of rigid bodies: ' , num2str( modelDescription.RigidBodyCount ) ] )
+				report( obj , [ 'number of skeletons: ' , num2str( modelDescription.SkeletonCount ) ] )
+				report( obj , [ 'number of force plates: ' , num2str( modelDescription.ForcePlateCount ) ] )
+				report( obj , [ 'number of devices: ' , num2str( modelDescription.DeviceCount ) ] )
+				report( obj , [ 'number of cameras: ' , num2str( modelDescription.CameraCount ) ] )
+			else
+				obj.report( 'connection not established' )
+			end
+		end % getModelDescription
+
+
+		function frameOfMocapData = getFrame( obj )
+			if ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				frameOfMocapData = data;
+			else
+				obj.report( 'connection not established' )
+			end
+		end % getFrame
+
+
+		function frameOfMetaData = getFrameMetaData( obj )
+			persistent data
+			if ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.CameraMidExposureTimestamp = data.CameraMidExposureTimestamp;
+				t.CameraDataReceivedTimestamp = data.CameraDataReceivedTimestamp;
+				t.TransmitTimestamp = data.TransmitTimestamp;
+				t.Recording = data.bRecording;
+				t.TrackingModelsChanged = data.bTrackingModelsChanged;
+				t.Timecode = data.Timecode;
+				t.TimecodeSubframe = data.TimecodeSubframe;
+				t.MarkerCount = data.nMarkers;
+				t.OtherMarkerCount = data.nOtherMarkers;
+				t.MarkerSetCount = data.nMarkerSets;
+				t.RigidBodyCount = data.nRigidBodies;
+				t.SkeletonCount = data.nSkeletons;
+				t.ForcePlateCount = data.nForcePlates;
+				t.DeviceCount = data.nDevices;
+				frameOfMetaData = t;
+			else
+				obj.report( 'connection not established' )
+			end
+		end % getFrameOfMetaData
+
+
+		function frameOfLabeledMarkerData = getFrameLabeledMarker( obj )
+			if ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerCount = data.nMarkers;
+				for i = t.MarkerCount : -1 : 1
+					t.LabeledMarker( i ).AssetID = int16( bitshift( data.LabeledMarkers( i ).ID , -16 ) );
+					t.LabeledMarker( i ).MemberID = int16( bitshift ( bitshift( data.LabeledMarkers( i ).ID , 16 ) , -16 ) );
+					t.LabeledMarker( i ).X = data.LabeledMarkers( i ).x;
+					t.LabeledMarker( i ).Y = data.LabeledMarkers( i ).y;
+					t.LabeledMarker( i ).Z = data.LabeledMarkers( i ).z;
+					t.LabeledMarker( i ).Size = data.LabeledMarkers( i ).size;
+					%t.LabeledMarker( i ).Occluded = logical( bitget( data.LabeledMarkers( i ).parameters , 1 ) );
+					t.LabeledMarker( i ).PointCloudSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 2 ) );
+					t.LabeledMarker( i ).AssetSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 3 ) );
+					t.LabeledMarker( i ).AssetMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 4 ) );
+					t.LabeledMarker( i ).UnlabeledMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 5 ) );
+					t.LabeledMarker( i ).ActiveMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 6 ) );
+					t.LabeledMarker( i ).Residual = data.LabeledMarkers( i ).residual;
+				end
+				frameOfLabeledMarkerData = t;
+			else
+				obj.report( 'connection not established' )
+			end
+		end % getFrameLabeledMarker
+
+
+		function frameOfMarkerSetData = getFrameMarkerSet( obj )
+			if ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerSetCount = data.nMarkerSets;
+				for i = t.MarkerSetCount : -1 : 1
+					t.MarkerSet( i ).MarkerSetName = string( data.MarkerSets( i ).MarkerSetName );
+					t.MarkerSet( i ).MarkerCount = data.MarkerSets( i ).nMarkers;
+					for j = t.MarkerSet( i ).MarkerCount : -1 : 1
+						%t.MarkerSet( i ).Marker( j ).AssetID = int16( bitshift( data.MarkerSets( i ).Markers( j ).ID , -16 ) );
+						%t.MarkerSet( i ).Marker( j ).MemberID = int16( bitshift ( bitshift( data.MarkerSets( i ).Markers( j ).ID , 16 ) , -16 ) );
+						t.MarkerSet( i ).Marker( j ).X = data.MarkerSets( i ).Markers( j ).x;
+						t.MarkerSet( i ).Marker( j ).Y = data.MarkerSets( i ).Markers( j ).y;
+						t.MarkerSet( i ).Marker( j ).Z = data.MarkerSets( i ).Markers( j ).z;
+						%t.MarkerSet( i ).Marker( j ).Size = data.MarkerSets( i ).Markers( j ).size;
+						%t.MarkerSet( i ).Marker( j ).Occluded = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 1 ) );
+						%t.MarkerSet( i ).Marker( j ).PointCloudSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 2 ) );
+						%t.MarkerSet( i ).Marker( j ).AssetSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 3 ) );
+						%t.MarkerSet( i ).Marker( j ).AssetMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 4 ) );
+						%t.MarkerSet( i ).Marker( j ).UnlabeledMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 5 ) );
+						%t.MarkerSet( i ).Marker( j ).ActiveMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 6 ) );
+						%t.MarkerSet( i ).Marker( j ).Residual = data.MarkerSets( i ).Markers( j ).residual;
+					end
+				end
+				frameOfMarkerSetData = t;
+			else
+				obj.report( 'connection not established' )
+			end
+		end % getFrameMarkerSet
+
+
+		function enable( obj , eListenerIndex )
+			if ~isnumeric( eListenerIndex ) || eListenerIndex &lt; 0 || eListenerIndex &gt; obj.MaxListeners
+				obj.report( 'invalid index' )
+				return
+			end
+
+			if obj.IsConnected == 0
+				return
+			end
+
+			if eListenerIndex == 0
+				for k = 1:obj.MaxListeners
+					if isa( obj.Listener{ k ,  1} , 'event.listener' ) &amp;&amp; obj.Listener{ k ,  1}.Enabled == false
+						obj.Listener{ k , 1  }.Enabled = true;
+						obj.report( [ 'listener enabled in slot: ' , num2str( k ) ] )
+					end
+				end
+			else
+				if( isa( obj.Listener{ eListenerIndex , 1 } , 'event.listener' ) ) &amp;&amp; obj.Listener{ eListenerIndex , 1 }.Enabled == false
+					obj.Listener{ eListenerIndex , 1 }.Enabled = true;
+					obj.report( [ 'listener enabled in slot: ' , num2str( eListenerIndex ) ] )
+				end
+			end
+		end % enable
+
+
+		function disable( obj , dListenerIndex );
+			if ~isnumeric( dListenerIndex ) || dListenerIndex &lt; 0 || dListenerIndex &gt; obj.MaxListeners
+				obj.report( 'invalid index' );
+				return
+			end
+
+			if obj.IsConnected == 0;
+				return
+			end
+
+			if dListenerIndex == 0
+				for k = 1:obj.MaxListeners
+					if isa( obj.Listener{ k , 1 } , 'event.listener'  )&amp;&amp; obj.Listener{ k ,  1}.Enabled == true;
+						obj.Listener{ k }.Enabled = false;
+						obj.report( [ 'listener disabled in slot: ' , num2str( k ) ] )
+					end
+				end
+			else
+				if( isa( obj.Listener{ dListenerIndex , 1 } , 'event.listener' ) ) &amp;&amp; obj.Listener{ dListenerIndex , 1 }.Enabled == true;
+					obj.Listener{ dListenerIndex , 1 }.Enabled = false;
+					obj.report( [ 'listener disabled in slot: ' , num2str( dListenerIndex ) ] )
+				end
+			end
+		end % disable
+
+
+		function startRecord( obj )
+			obj.sendMessageAndWait( 'StartRecording' );
+		end % startRecord
+
+
+		function stopRecord( obj )
+			obj.sendMessageAndWait( 'StopRecording' );
+		end % stopRecord
+
+
+		function cycleRecord( obj , iterations , duration , delay )
+			if ( isnumeric( iterations ) &amp;&amp; isnumeric( duration ) &amp;&amp; isnumeric( delay ) );
+				for i = 1:iterations
+					pause( delay );
+					obj.startRecord;
+					pause( duration );
+					obj.stopRecord;
+				end
+			end
+		end % cycleRecord
+
+
+		function liveMode( obj )
+			obj.sendMessageAndWait( 'LiveMode' );
+		end % liveMode
+
+
+		function editMode( obj )
+			obj.sendMessageAndWait( 'EditMode' );
+		end % editMode
+
+
+		function startPlayback( obj )
+			obj.sendMessageAndWait( 'TimelinePlay' );
+		end % startPlayback
+
+
+		function stopPlayback( obj )
+			obj.sendMessageAndWait( 'TimelineStop' );
+		end % stopPlayback
+
+
+		function setPlaybackStartFrame( obj , startFrame )
+			obj.sendMessageAndWait( [ 'SetPlaybackStartFrame,' , num2str( startFrame ) ] );
+		end % setPlaybackStartFrame
+
+
+		function setPlaybackEndFrame( obj , endFrame )
+			obj.sendMessageAndWait( [ 'SetPlaybackStopFrame,' , num2str( endFrame ) ] );
+		end % setPlaybackEndFrame
+
+
+		function setPlaybackLooping( obj , val )
+			obj.sendMessageAndWait( [ 'SetPlaybackLooping,' , num2str( val ) ] );
+		end % stopPlaybackLooping
+
+
+		function setPlaybackCurrentFrame( obj , currentFrame )
+			obj.sendMessageAndWait( [ 'SetPlaybackCurrentFrame,' , num2str( currentFrame ) ] );
+		end % stopPlaybackLooping
+
+
+		function setTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( 'SetRecordTakeName,' , name ) );
+		end % setTakeName
+
+
+		function setPlaybackTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( 'SetPlaybackTakeName,' , name ) );
+		end % setPlaybackTakeName
+
+
+		function setCurrentSession( obj , name )
+            obj.sendMessageAndWait( strcat('SetCurrentSession,' , name) );
+		end % setCurrentSession
+
+
+		function getMode( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( 'CurrentMode' );
+			if rc == 0
+				state = bytearray(1);
+				if ( state == 0 )
+					obj.Mode = 'Live';
+				elseif ( state == 1 )
+					obj.Mode = 'Recording';
+				elseif ( state == 2 )
+					obj.Mode = 'Edit';
+				else
+					obj.Mode = ' ';
+				end
+				obj.report( [ 'mode: ' , lower( obj.Mode ) ] )
+				return
+			else
+				obj.Mode = ' ';
+			end
+		end % getServerState
+
+
+		function disconnect( obj )
+			obj.disable( 0 );
+			for k = 1 : obj.MaxListeners
+				if isa( obj.Listener{ k , 1 } , 'event.listener' )
+					delete( obj.Listener{ k , 1 } )
+				end
+			end
+			obj.Listener{ obj.MaxListeners , 1 } = [  ];
+			if ( isempty( obj.Client ) == 0 )
+				obj.Client.Uninitialize;
+				obj.Client = [  ];
+				if ( obj.IsConnected == 1 )
+					report( obj , 'disconnecting' );
+				end
+				obj.IsConnected = 0;
+			end
+		end % disconnect
+
+
+		function delete( obj )
+			obj.disconnect
+		end % delete - destructor
+	end % methods ( Access = public )
+
+
+	methods ( Access = private )
+		function getLastAssemblyPath( obj )
+			pathtomfile = mfilename( 'fullpath' );
+			mfile = mfilename(  );
+			mfilenamelength = length( mfile );
+			foldertomfile = pathtomfile( 1 : end-mfilenamelength );
+			obj.LastAssemblyPathFile = strcat( foldertomfile , 'assemblypath.txt' );
+			if ( exist( obj.LastAssemblyPathFile , 'file' ) == 2 )
+				assemblypath = textread( obj.LastAssemblyPathFile , '%s' );
+				assemblypath = strjoin( assemblypath );
+				if( exist( assemblypath , 'file' ) == 2)
+					obj.AssemblyPath = assemblypath;
+				end
+			end
+		end % getLastAssemblyPath
+
+
+		function getAssemblies( obj )
+			obj.IsAssemblyLoaded = 0;
+			obj.Assembly = [  ];
+			obj.AssemblyVersion = [  ];
+			domain = System.AppDomain.CurrentDomain;
+			assemblies = domain.GetAssemblies;
+			assembly{ assemblies.Length , 1 } = [  ];
+			for i = 1:assemblies.Length
+				assembly{ i } = assemblies.Get( i-1 );
+				obj.Assembly{ i } = char( assembly{ i }.FullName );
+				if ( strncmp ( obj.Assembly{ i } , 'NatNetML' , 8 ) )
+					aver = regexp( obj.Assembly{ i } , '\d+' , 'match' );
+					obj.AssemblyVersion = strcat( aver{ 1 } , '.' , aver{ 2 } , '.' , aver{ 3 } , '.' , aver{ 4 } );
+					obj.IsAssemblyLoaded = 1;
+				end
+			end
+		end % getAssemblies
+
+
+		function addAssembly( obj )
+			if ( exist( obj.AssemblyPath , 'file' ) == 2 )
+				[ ~ ] = NET.addAssembly( obj.AssemblyPath );
+				obj.IsAssemblyLoaded = 1;
+			else
+				obj.IsAssemblyLoaded = 0;
+				report( obj , 'failed to add NatNetML.dll assembly' );
+			end
+		end % addAssembly
+
+
+		function setAssemblyPath( obj )
+			[ name , path ] =	uigetfile( '*.dll' , 'Select the NatNetML.dll assembly - NatNetLib.dll is a dependency' );
+			if ( strcmpi( name , 'NatNetML.dll') == 1 )
+				assemblyPath = strcat( path , name );
+				textAssemblyPath = strrep( assemblyPath , '\' , '\\' );
+				fileid = fopen( obj.LastAssemblyPathFile , 'wt');
+				fprintf( fileid , '%s' , assemblyPath );
+				fclose( fileid );
+				if ( obj.IsAssemblyLoaded == 0 )
+					obj.AssemblyPath = assemblyPath;
+					obj.report( [ 'defined assembly path: ' , textAssemblyPath ] )
+				else
+					obj.report( [ 'redefined assembly path: ' , textAssemblyPath ] )
+					obj.report( 'restart matlab to apply the changes' )
+				end
+			else
+				obj.report( 'invalid assembly path in function setAssemblyPath' )
+			end
+		end % setAssemlbyPath
+
+
+		function report( obj , message )
+			if ( obj.IsReporting == 1 )
+				ctime = strsplit( num2str( clock ) );
+				disp( sprintf ( [ ctime{ 1 } , '/' , ctime{ 2 } , '/' , ctime{ 3 } , '  ' , ctime{ 4 } , ':' , ctime{ 5 } , ':' , ctime{ 6 } , '  ' , 'natnet - ' , message ] ) )
+			end
+		end % report
+
+
+		function validIP = checkip( obj , value )
+			if ( ischar( value ) &amp;&amp; length( value ) &lt; 16 &amp;&amp; length( value ) &gt; 6 )
+				val = strsplit( value , '.' );
+				if ( length( val ) == 4 )
+					if all( isstrprop( val{ 1 } , 'digit' ) ) &amp;&amp; all( isstrprop( val{ 2 } , 'digit' ) )...
+							&amp;&amp; all( isstrprop( val{ 3 } , 'digit' ) ) &amp;&amp; all( isstrprop( val{ 4 } , 'digit' ) )...
+							&amp;&amp; length( val{ 1 } ) &lt; 4 &amp;&amp; length( val{ 2 } ) &lt; 4 &amp;&amp;  length( val{ 3 } ) &lt; 4 &amp;&amp; length( val{ 4 } ) &lt; 4 ...
+							&amp;&amp; ~isempty( val{ 1 } ) &amp;&amp; ~isempty( val{ 2 } ) &amp;&amp;  ~isempty( val{ 3 } ) &amp;&amp; ~isempty( val{ 4 } ) ...
+							&amp;&amp; str2double( val{ 1 } ) &lt; 256 &amp;&amp; str2double( val{ 2 } ) &lt; 256 &amp;&amp; str2double( val{ 3 } ) &lt; 256 &amp;&amp; str2double( val{ 4 } ) &lt; 256 ...
+							&amp;&amp; str2double( val{ 1 } ) &gt;= 0  &amp;&amp; str2double( val{ 2 } ) &gt;= 0 &amp;&amp; str2double( val{ 3 } ) &gt;= 0 &amp;&amp; str2double( val{ 4 } ) &gt;= 0
+						validIP = value;
+					else
+						report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )
+						validIP = [  ];
+					end
+				else
+					report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )
+					validIP = [  ];
+				end
+			else
+				report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )
+				validIP = [  ];
+			end
+		end % validIP
+
+
+		function [ bytearray , rc ] = sendMessageAndWait( obj , cmd )
+			if ( obj.IsConnected == 1 );
+				[ bytearray , rc ] = obj.Client.SendMessageAndWait( cmd );
+				if ( rc == 0 )
+					return
+				else
+					obj.report( 'command failed due to an unknown error' )
+				end
+			else
+				bytearray = '';
+				rc = '';
+				obj.report( 'connection not established' )
+			end
+		end % sendMessageAndWait
+	end % methods ( Access = private )
+end % classdef natnet &lt; handle</mcode><mcode-xmlized><mwsh:code xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd" xml:space="preserve"><mwsh:comments xml:space="preserve">% Copyright © 2019 Naturalpoint</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	Not for Redistribution</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	NatNet Matlab Class</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	Requires Matlab 2019a or later</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	This class is a wrapper for the NatNetML assembly and controls the</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	connection and communication between the OptiTrack NatNet Server and</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	Matlab clients.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	Public Properties:</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		ClientIP - The IP address of the client network.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		ConnectionType - Multicast of Unicast</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		HostIP - The IP address of the host/server network.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		IsReporting - state of commandline reporting</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		IsConnected - state of connection to server, updated only when</mwsh:comments>
+<mwsh:comments xml:space="preserve">%					establishing a connection. (Read-only)</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		Mode - state of the Motive server, Live or Edit. (Read-Only)</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		Version - version number of the natnet libraries. (Read-Only)</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		FrameRate - sampling rate of the Motive hardware. (Read-Only)</mwsh:comments>
+<mwsh:comments xml:space="preserve">%	Public Methods:</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		natnet - Object Constructor</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		connect - Establish a connection to an OptiTrack NatNet Server</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		disconnect - Close a connection to an OptiTrack NatNet Server</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		addlistener - Links a callback function to the server stream.</mwsh:comments>
+
+<mwsh:comments xml:space="preserve">%		getFrameRate - Returns the server Frame Rate.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		getModelDescription - Returns a structure of the asset list.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		getFrame - Returns the latest frame of mocap data.</mwsh:comments>
+
+<mwsh:comments xml:space="preserve">%		getFrameMetaData - Returns last frame of meta data within mocap</mwsh:comments>
+<mwsh:comments xml:space="preserve">%			frame. Return value is a Matlab struct</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		getFrameMarkerSet - Returns the last frame of MarkerSet data</mwsh:comments>
+<mwsh:comments xml:space="preserve">%			within mocap frame. Return value is a Matlab struct</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		getFrameLabeledMarker - Returns the last frame of LabeledMarker</mwsh:comments>
+<mwsh:comments xml:space="preserve">%			data within the mocap frame. Return value is a Matlab</mwsh:comments>
+<mwsh:comments xml:space="preserve">%			struct.</mwsh:comments>
+
+<mwsh:comments xml:space="preserve">%		getMode - Returns the state of the server: Live or Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		enable - Enables execution of a linked callback function.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		disable - Disabled execution of a linked callback function.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		Server Commands</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		startRecord - Starts a recording on the server.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		stopRecord - Stops a recording on the server.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		cycleRecord - Loops recording.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		liveMode - Changes the server to Live mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		editMode - Changes the server to Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		startPlayback - Starts playback of the server in Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		stopPlayback - Stops playback of the server in Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setPlaybackStartFrame - Sets the playback loop start frame.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setPlaybackEndFrame - Sets the playback loop end frame.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setPlaybackLooping - Sets playback to loop.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setPlaybackCurrentFrame - Sets the current frame in Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setTakeName - Sets the pending (to be recorded) take name.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setPlaybackTakeName - Opens a recorded take in Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		setCurrentSession - Changes the current folder in Edit mode.</mwsh:comments>
+<mwsh:comments xml:space="preserve">%		delete - Destructor for the natnet class</mwsh:comments>
+
+<mwsh:keywords xml:space="preserve">classdef</mwsh:keywords> natnet &lt; handle
+	<mwsh:keywords xml:space="preserve">properties</mwsh:keywords> ( Access = public )
+		ClientIP
+		ConnectionType
+		HostIP
+		IsReporting
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% properties ( Access = public )</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">properties</mwsh:keywords> ( SetAccess = private )
+		IsConnected
+		Mode
+		Version
+		FrameRate
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% properties ( SetAccess = private )</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">properties</mwsh:keywords> ( Access = private )
+		Assembly
+		AssemblyPath
+		AssemblyVersion
+		Client
+		IsAssemblyLoaded
+		LastAssemblyPathFile
+		MaxListeners
+		Listener
+		CReattempt
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% properties ( Access = private )</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">properties</mwsh:keywords> ( Access = private , Dependent = true )
+		iConnectionType
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% properties ( Access = private , Dependant = true )</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">methods</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> set.HostIP( obj , val )
+			validIP = obj.checkip( val);
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.HostIP = validIP;
+				obj.report( [ <mwsh:strings xml:space="preserve">'set host ip address: '</mwsh:strings> , validIP ] )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% set.HostIP</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> set.ClientIP( obj , val )
+			validIP = obj.checkip( val );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.ClientIP = validIP;
+				obj.report( [ <mwsh:strings xml:space="preserve">'set client ip address: '</mwsh:strings> , validIP ] )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% set.ClientIP</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> set.ConnectionType( obj , val )
+			obj.disconnect
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( strcmpi( <mwsh:strings xml:space="preserve">'Multicast'</mwsh:strings> , val ) == 1 )
+				obj.ConnectionType = <mwsh:strings xml:space="preserve">'Multicast'</mwsh:strings>;
+				obj.report( <mwsh:strings xml:space="preserve">'set multicast'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( strcmpi( <mwsh:strings xml:space="preserve">'Unicast'</mwsh:strings> , val ) == 1 )
+				obj.ConnectionType = <mwsh:strings xml:space="preserve">'Unicast'</mwsh:strings>;
+				obj.report( <mwsh:strings xml:space="preserve">'set unicast'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'invalid connection type'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% set.ConnectionType</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> set.IsReporting( obj , val )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( val == 1 )
+				obj.IsReporting = 1;
+				obj.report( <mwsh:strings xml:space="preserve">'reporting enabled'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( val == 0 )
+				obj.report( <mwsh:strings xml:space="preserve">'reporting disabled'</mwsh:strings> )
+				obj.IsReporting = 0;
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% set.IsReporting</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> iconnectiontype = get.iConnectionType( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( strcmpi( <mwsh:strings xml:space="preserve">'Multicast'</mwsh:strings> , obj.ConnectionType ) == 1 )
+				iconnectiontype = 0;
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( strcmpi( <mwsh:strings xml:space="preserve">'Unicast'</mwsh:strings> , obj.ConnectionType ) == 1 )
+				iconnectiontype = 1;
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% iconnectiontype</mwsh:comments>
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% methods ( property set and get methods)</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">methods</mwsh:keywords> ( Access = public  )
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> obj = natnet(  )
+			obj.getLastAssemblyPath
+			obj.MaxListeners = 255;
+			obj.Listener{ obj.MaxListeners , 1 } = [ ];
+			obj.FrameRate = 0;
+			obj.IsAssemblyLoaded = 0;
+			obj.IsConnected = 0;
+			obj.IsReporting = 0;
+			obj.CReattempt = 1;
+			obj.HostIP = <mwsh:strings xml:space="preserve">'127.0.0.1'</mwsh:strings>;
+			obj.ClientIP = <mwsh:strings xml:space="preserve">'127.0.0.1'</mwsh:strings>;
+			obj.ConnectionType = <mwsh:strings xml:space="preserve">'Multicast'</mwsh:strings>;
+			obj.Version = <mwsh:strings xml:space="preserve">' '</mwsh:strings>;
+			obj.Mode = <mwsh:strings xml:space="preserve">' '</mwsh:strings>;
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% natnet - constructor</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> connect( obj )
+			obj.disconnect
+			obj.getAssemblies
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( isempty( obj.AssemblyPath ) )
+					obj.setAssemblyPath
+					obj.addAssembly
+					obj.getAssemblies
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.addAssembly
+					obj.getAssemblies
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+				report( obj , <mwsh:strings xml:space="preserve">'natnetml assembly is missing or undefined'</mwsh:strings> )
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">try</mwsh:keywords>
+				obj.Client = NatNetML.NatNetClientML( obj.iConnectionType );
+				v = obj.Client.NatNetVersion(  );
+				obj.Version = sprintf( <mwsh:strings xml:space="preserve">'%d.%d.%d.%d'</mwsh:strings>, v( 1 ) , v( 2 ) , v( 3 ) , v( 4 ) );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords>  ( isempty( obj.Client ) == 1 || obj.IsAssemblyLoaded == 0 )
+					obj.report( <mwsh:strings xml:space="preserve">'client object invalid'</mwsh:strings> )
+					<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.report( [ <mwsh:strings xml:space="preserve">'natnet version: '</mwsh:strings> , obj.Version ] )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				flg = obj.Client.Initialize( obj.ClientIP , obj.HostIP );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> flg == 0
+					obj.report( <mwsh:strings xml:space="preserve">'client initialized'</mwsh:strings> )
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.report( <mwsh:strings xml:space="preserve">'initialization failed'</mwsh:strings> )
+					obj.IsConnected = 0;
+					<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">catch</mwsh:keywords> exception
+				rethrow(exception)
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			[ ~ , rc] = obj.Client.SendMessageAndWait( <mwsh:strings xml:space="preserve">'FrameRate'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> rc == 0
+				obj.IsConnected = 1;
+				obj.getFrameRate
+				obj.getMode
+				obj.getModelDescription;
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords>( rc == 1 )
+				obj.report( <mwsh:strings xml:space="preserve">'connection failed due to an internal error'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( rc == 2 )
+				obj.report( <mwsh:strings xml:space="preserve">'connection failed due to an external error'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( rc == 3 )
+				obj.report( <mwsh:strings xml:space="preserve">'connection failed due to a network error'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection failed due to an unknown error'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			obj.IsConnected = 0;
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% connect</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> addlistener( obj , aListenerIndex , functionhandlestring )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ~isnumeric( aListenerIndex ) || aListenerIndex &lt; 1 || aListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xml:space="preserve">'invalid index'</mwsh:strings> );
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> isa( functionhandlestring , <mwsh:strings xml:space="preserve">'char'</mwsh:strings> ) &amp;&amp; ~isempty( which( functionhandlestring ) )
+				functionhandle = str2func ( [ <mwsh:strings xml:space="preserve">'@( src , evnt)'</mwsh:strings> , functionhandlestring , <mwsh:strings xml:space="preserve">'( src , evnt)'</mwsh:strings> ] );
+
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ~isa( obj.Listener{ aListenerIndex , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> )
+					obj.report( [ <mwsh:strings xml:space="preserve">'adding listener in slot:'</mwsh:strings> , num2str(aListenerIndex ) ] );
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client , <mwsh:strings xml:space="preserve">'OnFrameReady2'</mwsh:strings> , functionhandle );
+					obj.disable( aListenerIndex );
+				<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> isa( obj.Listener{ aListenerIndex , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> )
+					obj.report( [ <mwsh:strings xml:space="preserve">'replacing listener in slot: '</mwsh:strings> , num2str(aListenerIndex ) ] )
+					obj.disable( aListenerIndex )
+					delete( obj.Listener{ aListenerIndex , 1 } )
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client, <mwsh:strings xml:space="preserve">'OnFrameReady2'</mwsh:strings> , functionhandle );
+					obj.disable ( aListenerIndex )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( [ <mwsh:strings xml:space="preserve">'invalid function set for slot: '</mwsh:strings> , num2str( aListenerIndex ) ] )
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% addlistener</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> getFrameRate( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'FrameRate'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> rc == 0
+				bytearray = uint8( bytearray );
+				obj.FrameRate =  typecast( bytearray , <mwsh:strings xml:space="preserve">'single'</mwsh:strings> );
+				obj.report( [ <mwsh:strings xml:space="preserve">'frame rate: '</mwsh:strings> , num2str( obj.FrameRate ) , <mwsh:strings xml:space="preserve">' fps'</mwsh:strings> ] )
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.FrameRate = 0;
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getFrameRate</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> modelDescription = getModelDescription( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				dataDescriptions = obj.Client.GetDataDescriptions(  );
+				modelDescription.TrackingModelCount = dataDescriptions.Count;
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of trackables: '</mwsh:strings> , num2str( dataDescriptions.Count ) ] )
+				modelDescription.MarkerSetCount = 0;
+				modelDescription.RigidBodyCount = 0;
+				modelDescription.SkeletonCount = 0;
+				modelDescription.ForcePlateCount = 0;
+				modelDescription.DeviceCount = 0;
+				modelDescription.CameraCount = 0;
+
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = 1 : modelDescription.TrackingModelCount
+					descriptor = dataDescriptions.Item( i - 1 );
+					<mwsh:comments xml:space="preserve">% marker sets</mwsh:comments>
+					<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( descriptor.type == 0)
+						modelDescription.MarkerSetCount = modelDescription.MarkerSetCount + 1;
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Name = char( descriptor.Name );
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).MarkerCount = descriptor.nMarkers;
+						<mwsh:keywords xml:space="preserve">for</mwsh:keywords> k = 1 : descriptor.nMarkers
+							modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Markers( k ).Label = char( descriptor.MarkerNames( k ) );
+						<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+					<mwsh:comments xml:space="preserve">% rigid bodies</mwsh:comments>
+					<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( descriptor.type == 1 )
+						modelDescription.RigidBodyCount = modelDescription.RigidBodyCount + 1;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Name = char( descriptor.Name );
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ID = descriptor.ID ;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ParentID = descriptor.parentID;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Type = descriptor.type;
+					<mwsh:comments xml:space="preserve">% skeletons</mwsh:comments>
+					<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( descriptor.type == 2 )
+						modelDescription.SkeletonCount = modelDescription.SkeletonCount + 1;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).Name = char( descriptor.Name );
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).ID = descriptor.ID;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount = descriptor.nRigidBodies;
+						<mwsh:keywords xml:space="preserve">for</mwsh:keywords> k = 1 : modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Name = char( descriptor.RigidBodies( k ).Name );
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ID = descriptor.RigidBodies( k ).ID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ParentID = descriptor.RigidBodies( k ).parentID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetX = descriptor.RigidBodies( k ).offsetx;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetY = descriptor.RigidBodies( k ).offsety;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetZ = descriptor.RigidBodies( k ).offsetz;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Type = descriptor.RigidBodies( k ).type;
+						<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+					<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( descriptor.type == 3 )
+						modelDescription.ForcePlateCount = modelDescription.ForcePlateCount + 1;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Serial = char( descriptor.Serial );
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ID = descriptor.ID;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Width = descriptor.Width;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Length = descriptor.Length;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.X = descriptor.OriginX;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Y = descriptor.OriginY;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Z = descriptor.OriginZ;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CalibrationMatrix = descriptor.CalMatrix;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount = descriptor.Corners.Length;
+						<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount/3
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).X = descriptor.Corners( i*3-2 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Y = descriptor.Corners( i*3-1 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Z = descriptor.Corners( i*3 );
+						<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).PlateType = descriptor.PlateType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelDataType = descriptor.ChannelDataType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount = descriptor.ChannelCount;
+						<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Channel( i ).Name = char( descriptor.ChannelNames( i ) );
+						<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+					<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> (descriptor.type == 4)
+						modelDescription.DeviceCount = modelDescription.DeviceCount + 1;
+					<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> (descriptor.type == -1 || descriptor.type == 5)
+						modelDescription.CameraCount = modelDescription.CameraCount + 1;
+					<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+						report( obj , <mwsh:strings xml:space="preserve">'invalid asset type'</mwsh:strings> )
+					<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of markersets: '</mwsh:strings> , num2str( modelDescription.MarkerSetCount ) ] )
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of rigid bodies: '</mwsh:strings> , num2str( modelDescription.RigidBodyCount ) ] )
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of skeletons: '</mwsh:strings> , num2str( modelDescription.SkeletonCount ) ] )
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of force plates: '</mwsh:strings> , num2str( modelDescription.ForcePlateCount ) ] )
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of devices: '</mwsh:strings> , num2str( modelDescription.DeviceCount ) ] )
+				report( obj , [ <mwsh:strings xml:space="preserve">'number of cameras: '</mwsh:strings> , num2str( modelDescription.CameraCount ) ] )
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getModelDescription</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> frameOfMocapData = getFrame( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				frameOfMocapData = data;
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getFrame</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> frameOfMetaData = getFrameMetaData( obj )
+			<mwsh:keywords xml:space="preserve">persistent</mwsh:keywords> data
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.CameraMidExposureTimestamp = data.CameraMidExposureTimestamp;
+				t.CameraDataReceivedTimestamp = data.CameraDataReceivedTimestamp;
+				t.TransmitTimestamp = data.TransmitTimestamp;
+				t.Recording = data.bRecording;
+				t.TrackingModelsChanged = data.bTrackingModelsChanged;
+				t.Timecode = data.Timecode;
+				t.TimecodeSubframe = data.TimecodeSubframe;
+				t.MarkerCount = data.nMarkers;
+				t.OtherMarkerCount = data.nOtherMarkers;
+				t.MarkerSetCount = data.nMarkerSets;
+				t.RigidBodyCount = data.nRigidBodies;
+				t.SkeletonCount = data.nSkeletons;
+				t.ForcePlateCount = data.nForcePlates;
+				t.DeviceCount = data.nDevices;
+				frameOfMetaData = t;
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getFrameOfMetaData</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> frameOfLabeledMarkerData = getFrameLabeledMarker( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerCount = data.nMarkers;
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = t.MarkerCount : -1 : 1
+					t.LabeledMarker( i ).AssetID = int16( bitshift( data.LabeledMarkers( i ).ID , -16 ) );
+					t.LabeledMarker( i ).MemberID = int16( bitshift ( bitshift( data.LabeledMarkers( i ).ID , 16 ) , -16 ) );
+					t.LabeledMarker( i ).X = data.LabeledMarkers( i ).x;
+					t.LabeledMarker( i ).Y = data.LabeledMarkers( i ).y;
+					t.LabeledMarker( i ).Z = data.LabeledMarkers( i ).z;
+					t.LabeledMarker( i ).Size = data.LabeledMarkers( i ).size;
+					<mwsh:comments xml:space="preserve">%t.LabeledMarker( i ).Occluded = logical( bitget( data.LabeledMarkers( i ).parameters , 1 ) );</mwsh:comments>
+					t.LabeledMarker( i ).PointCloudSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 2 ) );
+					t.LabeledMarker( i ).AssetSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 3 ) );
+					t.LabeledMarker( i ).AssetMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 4 ) );
+					t.LabeledMarker( i ).UnlabeledMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 5 ) );
+					t.LabeledMarker( i ).ActiveMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 6 ) );
+					t.LabeledMarker( i ).Residual = data.LabeledMarkers( i ).residual;
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				frameOfLabeledMarkerData = t;
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getFrameLabeledMarker</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> frameOfMarkerSetData = getFrameMarkerSet( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerSetCount = data.nMarkerSets;
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = t.MarkerSetCount : -1 : 1
+					t.MarkerSet( i ).MarkerSetName = string( data.MarkerSets( i ).MarkerSetName );
+					t.MarkerSet( i ).MarkerCount = data.MarkerSets( i ).nMarkers;
+					<mwsh:keywords xml:space="preserve">for</mwsh:keywords> j = t.MarkerSet( i ).MarkerCount : -1 : 1
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).AssetID = int16( bitshift( data.MarkerSets( i ).Markers( j ).ID , -16 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).MemberID = int16( bitshift ( bitshift( data.MarkerSets( i ).Markers( j ).ID , 16 ) , -16 ) );</mwsh:comments>
+						t.MarkerSet( i ).Marker( j ).X = data.MarkerSets( i ).Markers( j ).x;
+						t.MarkerSet( i ).Marker( j ).Y = data.MarkerSets( i ).Markers( j ).y;
+						t.MarkerSet( i ).Marker( j ).Z = data.MarkerSets( i ).Markers( j ).z;
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).Size = data.MarkerSets( i ).Markers( j ).size;</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).Occluded = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 1 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).PointCloudSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 2 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).AssetSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 3 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).AssetMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 4 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).UnlabeledMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 5 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).ActiveMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 6 ) );</mwsh:comments>
+						<mwsh:comments xml:space="preserve">%t.MarkerSet( i ).Marker( j ).Residual = data.MarkerSets( i ).Markers( j ).residual;</mwsh:comments>
+					<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				frameOfMarkerSetData = t;
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getFrameMarkerSet</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> enable( obj , eListenerIndex )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ~isnumeric( eListenerIndex ) || eListenerIndex &lt; 0 || eListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xml:space="preserve">'invalid index'</mwsh:strings> )
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> obj.IsConnected == 0
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> eListenerIndex == 0
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> k = 1:obj.MaxListeners
+					<mwsh:keywords xml:space="preserve">if</mwsh:keywords> isa( obj.Listener{ k ,  1} , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> ) &amp;&amp; obj.Listener{ k ,  1}.Enabled == false
+						obj.Listener{ k , 1  }.Enabled = true;
+						obj.report( [ <mwsh:strings xml:space="preserve">'listener enabled in slot: '</mwsh:strings> , num2str( k ) ] )
+					<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords>( isa( obj.Listener{ eListenerIndex , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> ) ) &amp;&amp; obj.Listener{ eListenerIndex , 1 }.Enabled == false
+					obj.Listener{ eListenerIndex , 1 }.Enabled = true;
+					obj.report( [ <mwsh:strings xml:space="preserve">'listener enabled in slot: '</mwsh:strings> , num2str( eListenerIndex ) ] )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% enable</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> disable( obj , dListenerIndex );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ~isnumeric( dListenerIndex ) || dListenerIndex &lt; 0 || dListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xml:space="preserve">'invalid index'</mwsh:strings> );
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> obj.IsConnected == 0;
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> dListenerIndex == 0
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> k = 1:obj.MaxListeners
+					<mwsh:keywords xml:space="preserve">if</mwsh:keywords> isa( obj.Listener{ k , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings>  )&amp;&amp; obj.Listener{ k ,  1}.Enabled == true;
+						obj.Listener{ k }.Enabled = false;
+						obj.report( [ <mwsh:strings xml:space="preserve">'listener disabled in slot: '</mwsh:strings> , num2str( k ) ] )
+					<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords>( isa( obj.Listener{ dListenerIndex , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> ) ) &amp;&amp; obj.Listener{ dListenerIndex , 1 }.Enabled == true;
+					obj.Listener{ dListenerIndex , 1 }.Enabled = false;
+					obj.report( [ <mwsh:strings xml:space="preserve">'listener disabled in slot: '</mwsh:strings> , num2str( dListenerIndex ) ] )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% disable</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> startRecord( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'StartRecording'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% startRecord</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> stopRecord( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'StopRecording'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% stopRecord</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> cycleRecord( obj , iterations , duration , delay )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( isnumeric( iterations ) &amp;&amp; isnumeric( duration ) &amp;&amp; isnumeric( delay ) );
+				<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = 1:iterations
+					pause( delay );
+					obj.startRecord;
+					pause( duration );
+					obj.stopRecord;
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% cycleRecord</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> liveMode( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'LiveMode'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% liveMode</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> editMode( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'EditMode'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% editMode</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> startPlayback( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'TimelinePlay'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% startPlayback</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> stopPlayback( obj )
+			obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'TimelineStop'</mwsh:strings> );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% stopPlayback</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setPlaybackStartFrame( obj , startFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xml:space="preserve">'SetPlaybackStartFrame,'</mwsh:strings> , num2str( startFrame ) ] );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setPlaybackStartFrame</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setPlaybackEndFrame( obj , endFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xml:space="preserve">'SetPlaybackStopFrame,'</mwsh:strings> , num2str( endFrame ) ] );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setPlaybackEndFrame</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setPlaybackLooping( obj , val )
+			obj.sendMessageAndWait( [ <mwsh:strings xml:space="preserve">'SetPlaybackLooping,'</mwsh:strings> , num2str( val ) ] );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% stopPlaybackLooping</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setPlaybackCurrentFrame( obj , currentFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xml:space="preserve">'SetPlaybackCurrentFrame,'</mwsh:strings> , num2str( currentFrame ) ] );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% stopPlaybackLooping</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( <mwsh:strings xml:space="preserve">'SetRecordTakeName,'</mwsh:strings> , name ) );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setTakeName</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setPlaybackTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( <mwsh:strings xml:space="preserve">'SetPlaybackTakeName,'</mwsh:strings> , name ) );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setPlaybackTakeName</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setCurrentSession( obj , name )
+            obj.sendMessageAndWait( strcat(<mwsh:strings xml:space="preserve">'SetCurrentSession,'</mwsh:strings> , name) );
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setCurrentSession</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> getMode( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( <mwsh:strings xml:space="preserve">'CurrentMode'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> rc == 0
+				state = bytearray(1);
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( state == 0 )
+					obj.Mode = <mwsh:strings xml:space="preserve">'Live'</mwsh:strings>;
+				<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( state == 1 )
+					obj.Mode = <mwsh:strings xml:space="preserve">'Recording'</mwsh:strings>;
+				<mwsh:keywords xml:space="preserve">elseif</mwsh:keywords> ( state == 2 )
+					obj.Mode = <mwsh:strings xml:space="preserve">'Edit'</mwsh:strings>;
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.Mode = <mwsh:strings xml:space="preserve">' '</mwsh:strings>;
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				obj.report( [ <mwsh:strings xml:space="preserve">'mode: '</mwsh:strings> , lower( obj.Mode ) ] )
+				<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.Mode = <mwsh:strings xml:space="preserve">' '</mwsh:strings>;
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getServerState</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> disconnect( obj )
+			obj.disable( 0 );
+			<mwsh:keywords xml:space="preserve">for</mwsh:keywords> k = 1 : obj.MaxListeners
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> isa( obj.Listener{ k , 1 } , <mwsh:strings xml:space="preserve">'event.listener'</mwsh:strings> )
+					delete( obj.Listener{ k , 1 } )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			obj.Listener{ obj.MaxListeners , 1 } = [  ];
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( isempty( obj.Client ) == 0 )
+				obj.Client.Uninitialize;
+				obj.Client = [  ];
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 )
+					report( obj , <mwsh:strings xml:space="preserve">'disconnecting'</mwsh:strings> );
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				obj.IsConnected = 0;
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% disconnect</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> delete( obj )
+			obj.disconnect
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% delete - destructor</mwsh:comments>
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% methods ( Access = public )</mwsh:comments>
+
+
+	<mwsh:keywords xml:space="preserve">methods</mwsh:keywords> ( Access = private )
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> getLastAssemblyPath( obj )
+			pathtomfile = mfilename( <mwsh:strings xml:space="preserve">'fullpath'</mwsh:strings> );
+			mfile = mfilename(  );
+			mfilenamelength = length( mfile );
+			foldertomfile = pathtomfile( 1 : end-mfilenamelength );
+			obj.LastAssemblyPathFile = strcat( foldertomfile , <mwsh:strings xml:space="preserve">'assemblypath.txt'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( exist( obj.LastAssemblyPathFile , <mwsh:strings xml:space="preserve">'file'</mwsh:strings> ) == 2 )
+				assemblypath = textread( obj.LastAssemblyPathFile , <mwsh:strings xml:space="preserve">'%s'</mwsh:strings> );
+				assemblypath = strjoin( assemblypath );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords>( exist( assemblypath , <mwsh:strings xml:space="preserve">'file'</mwsh:strings> ) == 2)
+					obj.AssemblyPath = assemblypath;
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getLastAssemblyPath</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> getAssemblies( obj )
+			obj.IsAssemblyLoaded = 0;
+			obj.Assembly = [  ];
+			obj.AssemblyVersion = [  ];
+			domain = System.AppDomain.CurrentDomain;
+			assemblies = domain.GetAssemblies;
+			assembly{ assemblies.Length , 1 } = [  ];
+			<mwsh:keywords xml:space="preserve">for</mwsh:keywords> i = 1:assemblies.Length
+				assembly{ i } = assemblies.Get( i-1 );
+				obj.Assembly{ i } = char( assembly{ i }.FullName );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( strncmp ( obj.Assembly{ i } , <mwsh:strings xml:space="preserve">'NatNetML'</mwsh:strings> , 8 ) )
+					aver = regexp( obj.Assembly{ i } , <mwsh:strings xml:space="preserve">'\d+'</mwsh:strings> , <mwsh:strings xml:space="preserve">'match'</mwsh:strings> );
+					obj.AssemblyVersion = strcat( aver{ 1 } , <mwsh:strings xml:space="preserve">'.'</mwsh:strings> , aver{ 2 } , <mwsh:strings xml:space="preserve">'.'</mwsh:strings> , aver{ 3 } , <mwsh:strings xml:space="preserve">'.'</mwsh:strings> , aver{ 4 } );
+					obj.IsAssemblyLoaded = 1;
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% getAssemblies</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> addAssembly( obj )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( exist( obj.AssemblyPath , <mwsh:strings xml:space="preserve">'file'</mwsh:strings> ) == 2 )
+				[ ~ ] = NET.addAssembly( obj.AssemblyPath );
+				obj.IsAssemblyLoaded = 1;
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.IsAssemblyLoaded = 0;
+				report( obj , <mwsh:strings xml:space="preserve">'failed to add NatNetML.dll assembly'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% addAssembly</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> setAssemblyPath( obj )
+			[ name , path ] =	uigetfile( <mwsh:strings xml:space="preserve">'*.dll'</mwsh:strings> , <mwsh:strings xml:space="preserve">'Select the NatNetML.dll assembly - NatNetLib.dll is a dependency'</mwsh:strings> );
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( strcmpi( name , <mwsh:strings xml:space="preserve">'NatNetML.dll'</mwsh:strings>) == 1 )
+				assemblyPath = strcat( path , name );
+				textAssemblyPath = strrep( assemblyPath , <mwsh:strings xml:space="preserve">'\'</mwsh:strings> , <mwsh:strings xml:space="preserve">'\\'</mwsh:strings> );
+				fileid = fopen( obj.LastAssemblyPathFile , <mwsh:strings xml:space="preserve">'wt'</mwsh:strings>);
+				fprintf( fileid , <mwsh:strings xml:space="preserve">'%s'</mwsh:strings> , assemblyPath );
+				fclose( fileid );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+					obj.AssemblyPath = assemblyPath;
+					obj.report( [ <mwsh:strings xml:space="preserve">'defined assembly path: '</mwsh:strings> , textAssemblyPath ] )
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.report( [ <mwsh:strings xml:space="preserve">'redefined assembly path: '</mwsh:strings> , textAssemblyPath ] )
+					obj.report( <mwsh:strings xml:space="preserve">'restart matlab to apply the changes'</mwsh:strings> )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				obj.report( <mwsh:strings xml:space="preserve">'invalid assembly path in function setAssemblyPath'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% setAssemlbyPath</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> report( obj , message )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsReporting == 1 )
+				ctime = strsplit( num2str( clock ) );
+				disp( sprintf ( [ ctime{ 1 } , <mwsh:strings xml:space="preserve">'/'</mwsh:strings> , ctime{ 2 } , <mwsh:strings xml:space="preserve">'/'</mwsh:strings> , ctime{ 3 } , <mwsh:strings xml:space="preserve">'  '</mwsh:strings> , ctime{ 4 } , <mwsh:strings xml:space="preserve">':'</mwsh:strings> , ctime{ 5 } , <mwsh:strings xml:space="preserve">':'</mwsh:strings> , ctime{ 6 } , <mwsh:strings xml:space="preserve">'  '</mwsh:strings> , <mwsh:strings xml:space="preserve">'natnet - '</mwsh:strings> , message ] ) )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% report</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> validIP = checkip( obj , value )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( ischar( value ) &amp;&amp; length( value ) &lt; 16 &amp;&amp; length( value ) &gt; 6 )
+				val = strsplit( value , <mwsh:strings xml:space="preserve">'.'</mwsh:strings> );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( length( val ) == 4 )
+					<mwsh:keywords xml:space="preserve">if</mwsh:keywords> all( isstrprop( val{ 1 } , <mwsh:strings xml:space="preserve">'digit'</mwsh:strings> ) ) &amp;&amp; all( isstrprop( val{ 2 } , <mwsh:strings xml:space="preserve">'digit'</mwsh:strings> ) )<mwsh:keywords xml:space="preserve">...</mwsh:keywords>
+							&amp;&amp; all( isstrprop( val{ 3 } , <mwsh:strings xml:space="preserve">'digit'</mwsh:strings> ) ) &amp;&amp; all( isstrprop( val{ 4 } , <mwsh:strings xml:space="preserve">'digit'</mwsh:strings> ) )<mwsh:keywords xml:space="preserve">...</mwsh:keywords>
+							&amp;&amp; length( val{ 1 } ) &lt; 4 &amp;&amp; length( val{ 2 } ) &lt; 4 &amp;&amp;  length( val{ 3 } ) &lt; 4 &amp;&amp; length( val{ 4 } ) &lt; 4 <mwsh:keywords xml:space="preserve">...</mwsh:keywords>
+							&amp;&amp; ~isempty( val{ 1 } ) &amp;&amp; ~isempty( val{ 2 } ) &amp;&amp;  ~isempty( val{ 3 } ) &amp;&amp; ~isempty( val{ 4 } ) <mwsh:keywords xml:space="preserve">...</mwsh:keywords>
+							&amp;&amp; str2double( val{ 1 } ) &lt; 256 &amp;&amp; str2double( val{ 2 } ) &lt; 256 &amp;&amp; str2double( val{ 3 } ) &lt; 256 &amp;&amp; str2double( val{ 4 } ) &lt; 256 <mwsh:keywords xml:space="preserve">...</mwsh:keywords>
+							&amp;&amp; str2double( val{ 1 } ) &gt;= 0  &amp;&amp; str2double( val{ 2 } ) &gt;= 0 &amp;&amp; str2double( val{ 3 } ) &gt;= 0 &amp;&amp; str2double( val{ 4 } ) &gt;= 0
+						validIP = value;
+					<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+						report( obj , <mwsh:strings xml:space="preserve">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+						validIP = [  ];
+					<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					report( obj , <mwsh:strings xml:space="preserve">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+					validIP = [  ];
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				report( obj , <mwsh:strings xml:space="preserve">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+				validIP = [  ];
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% validIP</mwsh:comments>
+
+
+		<mwsh:keywords xml:space="preserve">function</mwsh:keywords> [ bytearray , rc ] = sendMessageAndWait( obj , cmd )
+			<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( obj.IsConnected == 1 );
+				[ bytearray , rc ] = obj.Client.SendMessageAndWait( cmd );
+				<mwsh:keywords xml:space="preserve">if</mwsh:keywords> ( rc == 0 )
+					<mwsh:keywords xml:space="preserve">return</mwsh:keywords>
+				<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+					obj.report( <mwsh:strings xml:space="preserve">'command failed due to an unknown error'</mwsh:strings> )
+				<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+			<mwsh:keywords xml:space="preserve">else</mwsh:keywords>
+				bytearray = <mwsh:strings xml:space="preserve">''</mwsh:strings>;
+				rc = <mwsh:strings xml:space="preserve">''</mwsh:strings>;
+				obj.report( <mwsh:strings xml:space="preserve">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xml:space="preserve">end</mwsh:keywords>
+		<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% sendMessageAndWait</mwsh:comments>
+	<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% methods ( Access = private )</mwsh:comments>
+<mwsh:keywords xml:space="preserve">end</mwsh:keywords> <mwsh:comments xml:space="preserve">% classdef natnet &lt; handle</mwsh:comments></mwsh:code></mcode-xmlized><mcode-count>1</mcode-count><cellOutputTarget>1</cellOutputTarget><mcodeoutput class="codeoutput">
+ans = 
+
+  natnet with properties:
+
+          ClientIP: '127.0.0.1'
+    ConnectionType: 'Multicast'
+            HostIP: '127.0.0.1'
+       IsReporting: 0
+       IsConnected: 0
+              Mode: ' '
+           Version: ' '
+         FrameRate: 0
+
+</mcodeoutput></cell><originalCode>% Copyright © 2019 Naturalpoint&#xD;
+%	Not for Redistribution&#xD;
+%	NatNet Matlab Class&#xD;
+%	Requires Matlab 2019a or later&#xD;
+%	This class is a wrapper for the NatNetML assembly and controls the&#xD;
+%	connection and communication between the OptiTrack NatNet Server and&#xD;
+%	Matlab clients.&#xD;
+%	Public Properties:&#xD;
+%		ClientIP - The IP address of the client network.&#xD;
+%		ConnectionType - Multicast of Unicast&#xD;
+%		HostIP - The IP address of the host/server network.&#xD;
+%		IsReporting - state of commandline reporting&#xD;
+%		IsConnected - state of connection to server, updated only when&#xD;
+%					establishing a connection. (Read-only)&#xD;
+%		Mode - state of the Motive server, Live or Edit. (Read-Only)&#xD;
+%		Version - version number of the natnet libraries. (Read-Only)&#xD;
+%		FrameRate - sampling rate of the Motive hardware. (Read-Only)&#xD;
+%	Public Methods:&#xD;
+%		natnet - Object Constructor&#xD;
+%		connect - Establish a connection to an OptiTrack NatNet Server&#xD;
+%		disconnect - Close a connection to an OptiTrack NatNet Server&#xD;
+%		addlistener - Links a callback function to the server stream.&#xD;
+&#xD;
+%		getFrameRate - Returns the server Frame Rate.&#xD;
+%		getModelDescription - Returns a structure of the asset list.&#xD;
+%		getFrame - Returns the latest frame of mocap data.&#xD;
+&#xD;
+%		getFrameMetaData - Returns last frame of meta data within mocap&#xD;
+%			frame. Return value is a Matlab struct&#xD;
+%		getFrameMarkerSet - Returns the last frame of MarkerSet data&#xD;
+%			within mocap frame. Return value is a Matlab struct&#xD;
+%		getFrameLabeledMarker - Returns the last frame of LabeledMarker&#xD;
+%			data within the mocap frame. Return value is a Matlab&#xD;
+%			struct.&#xD;
+&#xD;
+%		getMode - Returns the state of the server: Live or Edit mode.&#xD;
+%		enable - Enables execution of a linked callback function.&#xD;
+%		disable - Disabled execution of a linked callback function.&#xD;
+%		Server Commands&#xD;
+%		startRecord - Starts a recording on the server.&#xD;
+%		stopRecord - Stops a recording on the server.&#xD;
+%		cycleRecord - Loops recording.&#xD;
+%		liveMode - Changes the server to Live mode.&#xD;
+%		editMode - Changes the server to Edit mode.&#xD;
+%		startPlayback - Starts playback of the server in Edit mode.&#xD;
+%		stopPlayback - Stops playback of the server in Edit mode.&#xD;
+%		setPlaybackStartFrame - Sets the playback loop start frame.&#xD;
+%		setPlaybackEndFrame - Sets the playback loop end frame.&#xD;
+%		setPlaybackLooping - Sets playback to loop.&#xD;
+%		setPlaybackCurrentFrame - Sets the current frame in Edit mode.&#xD;
+%		setTakeName - Sets the pending (to be recorded) take name.&#xD;
+%		setPlaybackTakeName - Opens a recorded take in Edit mode.&#xD;
+%		setCurrentSession - Changes the current folder in Edit mode.&#xD;
+%		delete - Destructor for the natnet class&#xD;
+&#xD;
+classdef natnet &lt; handle&#xD;
+	properties ( Access = public )&#xD;
+		ClientIP&#xD;
+		ConnectionType&#xD;
+		HostIP&#xD;
+		IsReporting&#xD;
+	end % properties ( Access = public )&#xD;
+	&#xD;
+	&#xD;
+	properties ( SetAccess = private )&#xD;
+		IsConnected&#xD;
+		Mode&#xD;
+		Version&#xD;
+		FrameRate&#xD;
+	end % properties ( SetAccess = private )&#xD;
+&#xD;
+	&#xD;
+	properties ( Access = private )&#xD;
+		Assembly&#xD;
+		AssemblyPath&#xD;
+		AssemblyVersion&#xD;
+		Client&#xD;
+		IsAssemblyLoaded&#xD;
+		LastAssemblyPathFile&#xD;
+		MaxListeners&#xD;
+		Listener&#xD;
+		CReattempt&#xD;
+	end % properties ( Access = private )&#xD;
+	&#xD;
+	&#xD;
+	properties ( Access = private , Dependent = true )&#xD;
+		iConnectionType&#xD;
+	end % properties ( Access = private , Dependant = true )&#xD;
+	&#xD;
+	&#xD;
+	methods&#xD;
+		function set.HostIP( obj , val )&#xD;
+			validIP = obj.checkip( val);&#xD;
+			if ( ~isempty( validIP ) )&#xD;
+				obj.disconnect&#xD;
+				obj.HostIP = validIP;&#xD;
+				obj.report( [ 'set host ip address: ' , validIP ] )&#xD;
+			end&#xD;
+		end % set.HostIP&#xD;
+		&#xD;
+		&#xD;
+		function set.ClientIP( obj , val )&#xD;
+			validIP = obj.checkip( val );&#xD;
+			if ( ~isempty( validIP ) )&#xD;
+				obj.disconnect&#xD;
+				obj.ClientIP = validIP;&#xD;
+				obj.report( [ 'set client ip address: ' , validIP ] )&#xD;
+			end&#xD;
+		end % set.ClientIP&#xD;
+		&#xD;
+		&#xD;
+		function set.ConnectionType( obj , val )&#xD;
+			obj.disconnect&#xD;
+			if ( strcmpi( 'Multicast' , val ) == 1 )&#xD;
+				obj.ConnectionType = 'Multicast';&#xD;
+				obj.report( 'set multicast' )&#xD;
+			elseif ( strcmpi( 'Unicast' , val ) == 1 )&#xD;
+				obj.ConnectionType = 'Unicast';&#xD;
+				obj.report( 'set unicast' )&#xD;
+			else&#xD;
+				obj.report( 'invalid connection type' )&#xD;
+			end&#xD;
+		end % set.ConnectionType&#xD;
+		&#xD;
+		&#xD;
+		function set.IsReporting( obj , val )&#xD;
+			if ( val == 1 )&#xD;
+				obj.IsReporting = 1;&#xD;
+				obj.report( 'reporting enabled' )&#xD;
+			elseif ( val == 0 )&#xD;
+				obj.report( 'reporting disabled' )&#xD;
+				obj.IsReporting = 0;&#xD;
+			end&#xD;
+		end % set.IsReporting&#xD;
+		&#xD;
+		&#xD;
+		function iconnectiontype = get.iConnectionType( obj )&#xD;
+			if ( strcmpi( 'Multicast' , obj.ConnectionType ) == 1 )&#xD;
+				iconnectiontype = 0;&#xD;
+			elseif ( strcmpi( 'Unicast' , obj.ConnectionType ) == 1 )&#xD;
+				iconnectiontype = 1;&#xD;
+			end&#xD;
+		end % iconnectiontype&#xD;
+	end % methods ( property set and get methods)&#xD;
+	&#xD;
+&#xD;
+	methods ( Access = public  )&#xD;
+		function obj = natnet(  )&#xD;
+			obj.getLastAssemblyPath&#xD;
+			obj.MaxListeners = 255;&#xD;
+			obj.Listener{ obj.MaxListeners , 1 } = [ ];&#xD;
+			obj.FrameRate = 0;&#xD;
+			obj.IsAssemblyLoaded = 0;&#xD;
+			obj.IsConnected = 0;&#xD;
+			obj.IsReporting = 0;&#xD;
+			obj.CReattempt = 1;&#xD;
+			obj.HostIP = '127.0.0.1';&#xD;
+			obj.ClientIP = '127.0.0.1';&#xD;
+			obj.ConnectionType = 'Multicast';&#xD;
+			obj.Version = ' ';&#xD;
+			obj.Mode = ' ';&#xD;
+		end % natnet - constructor&#xD;
+		&#xD;
+							&#xD;
+		function connect( obj )&#xD;
+			obj.disconnect&#xD;
+			obj.getAssemblies&#xD;
+			if ( obj.IsAssemblyLoaded == 0 )&#xD;
+				if ( isempty( obj.AssemblyPath ) )&#xD;
+					obj.setAssemblyPath&#xD;
+					obj.addAssembly&#xD;
+					obj.getAssemblies&#xD;
+				else&#xD;
+					obj.addAssembly&#xD;
+					obj.getAssemblies&#xD;
+				end	&#xD;
+			end&#xD;
+			if ( obj.IsAssemblyLoaded == 0 )&#xD;
+				report( obj , 'natnetml assembly is missing or undefined' )&#xD;
+				return&#xD;
+			end&#xD;
+			try&#xD;
+				obj.Client = NatNetML.NatNetClientML( obj.iConnectionType );&#xD;
+				v = obj.Client.NatNetVersion(  );&#xD;
+				obj.Version = sprintf( '%d.%d.%d.%d', v( 1 ) , v( 2 ) , v( 3 ) , v( 4 ) );&#xD;
+				if  ( isempty( obj.Client ) == 1 || obj.IsAssemblyLoaded == 0 )&#xD;
+					obj.report( 'client object invalid' )&#xD;
+					return&#xD;
+				else&#xD;
+					obj.report( [ 'natnet version: ' , obj.Version ] )&#xD;
+				end&#xD;
+				flg = obj.Client.Initialize( obj.ClientIP , obj.HostIP );&#xD;
+				if flg == 0&#xD;
+					obj.report( 'client initialized' )&#xD;
+				else&#xD;
+					obj.report( 'initialization failed' )&#xD;
+					obj.IsConnected = 0;&#xD;
+					return&#xD;
+				end&#xD;
+			catch exception&#xD;
+				rethrow(exception)&#xD;
+			end&#xD;
+			&#xD;
+			[ ~ , rc] = obj.Client.SendMessageAndWait( 'FrameRate' );&#xD;
+			if rc == 0&#xD;
+				obj.IsConnected = 1;&#xD;
+				obj.getFrameRate&#xD;
+				obj.getMode&#xD;
+				obj.getModelDescription;&#xD;
+				return&#xD;
+			elseif( rc == 1 )&#xD;
+				obj.report( 'connection failed due to an internal error' )&#xD;
+			elseif ( rc == 2 )&#xD;
+				obj.report( 'connection failed due to an external error' )&#xD;
+			elseif ( rc == 3 )&#xD;
+				obj.report( 'connection failed due to a network error' )&#xD;
+			else&#xD;
+				obj.report( 'connection failed due to an unknown error' )				&#xD;
+			end&#xD;
+			obj.IsConnected = 0;&#xD;
+		end % connect&#xD;
+		&#xD;
+		&#xD;
+		function addlistener( obj , aListenerIndex , functionhandlestring )&#xD;
+			if ~isnumeric( aListenerIndex ) || aListenerIndex &lt; 1 || aListenerIndex &gt; obj.MaxListeners&#xD;
+				obj.report( 'invalid index' );&#xD;
+				return&#xD;
+			end&#xD;
+			&#xD;
+			if isa( functionhandlestring , 'char' ) &amp;&amp; ~isempty( which( functionhandlestring ) )&#xD;
+				functionhandle = str2func ( [ '@( src , evnt)' , functionhandlestring , '( src , evnt)' ] );		&#xD;
+&#xD;
+				if ~isa( obj.Listener{ aListenerIndex , 1 } , 'event.listener' )&#xD;
+					obj.report( [ 'adding listener in slot:' , num2str(aListenerIndex ) ] );&#xD;
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client , 'OnFrameReady2' , functionhandle );&#xD;
+					obj.disable( aListenerIndex );&#xD;
+				elseif isa( obj.Listener{ aListenerIndex , 1 } , 'event.listener' )&#xD;
+					obj.report( [ 'replacing listener in slot: ' , num2str(aListenerIndex ) ] )&#xD;
+					obj.disable( aListenerIndex )&#xD;
+					delete( obj.Listener{ aListenerIndex , 1 } )&#xD;
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client, 'OnFrameReady2' , functionhandle );&#xD;
+					obj.disable ( aListenerIndex )&#xD;
+				end&#xD;
+			else&#xD;
+				obj.report( [ 'invalid function set for slot: ' , num2str( aListenerIndex ) ] )&#xD;
+				return&#xD;
+			end&#xD;
+		end % addlistener&#xD;
+		&#xD;
+		&#xD;
+		function getFrameRate( obj )&#xD;
+			[ bytearray , rc ] = obj.sendMessageAndWait( 'FrameRate' );&#xD;
+			if rc == 0&#xD;
+				bytearray = uint8( bytearray );&#xD;
+				obj.FrameRate =  typecast( bytearray , 'single' );&#xD;
+				obj.report( [ 'frame rate: ' , num2str( obj.FrameRate ) , ' fps' ] )&#xD;
+			else&#xD;
+				obj.FrameRate = 0;&#xD;
+			end&#xD;
+		end % getFrameRate&#xD;
+		&#xD;
+		&#xD;
+		function modelDescription = getModelDescription( obj )&#xD;
+			if ( obj.IsConnected == 1 )&#xD;
+				dataDescriptions = obj.Client.GetDataDescriptions(  );&#xD;
+				modelDescription.TrackingModelCount = dataDescriptions.Count;&#xD;
+				report( obj , [ 'number of trackables: ' , num2str( dataDescriptions.Count ) ] )&#xD;
+				modelDescription.MarkerSetCount = 0;&#xD;
+				modelDescription.RigidBodyCount = 0;&#xD;
+				modelDescription.SkeletonCount = 0;&#xD;
+				modelDescription.ForcePlateCount = 0;&#xD;
+				modelDescription.DeviceCount = 0;&#xD;
+				modelDescription.CameraCount = 0;&#xD;
+&#xD;
+				for i = 1 : modelDescription.TrackingModelCount&#xD;
+					descriptor = dataDescriptions.Item( i - 1 );&#xD;
+					% marker sets&#xD;
+					if ( descriptor.type == 0)&#xD;
+						modelDescription.MarkerSetCount = modelDescription.MarkerSetCount + 1;&#xD;
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Name = char( descriptor.Name );&#xD;
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).MarkerCount = descriptor.nMarkers;&#xD;
+						for k = 1 : descriptor.nMarkers&#xD;
+							modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Markers( k ).Label = char( descriptor.MarkerNames( k ) );&#xD;
+						end&#xD;
+					% rigid bodies&#xD;
+					elseif ( descriptor.type == 1 )&#xD;
+						modelDescription.RigidBodyCount = modelDescription.RigidBodyCount + 1;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Name = char( descriptor.Name );&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ID = descriptor.ID ;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ParentID = descriptor.parentID;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;&#xD;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Type = descriptor.type;						&#xD;
+					% skeletons&#xD;
+					elseif ( descriptor.type == 2 )&#xD;
+						modelDescription.SkeletonCount = modelDescription.SkeletonCount + 1;&#xD;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).Name = char( descriptor.Name );&#xD;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).ID = descriptor.ID;&#xD;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount = descriptor.nRigidBodies;&#xD;
+						for k = 1 : modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Name = char( descriptor.RigidBodies( k ).Name ); &#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ID = descriptor.RigidBodies( k ).ID;&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ParentID = descriptor.RigidBodies( k ).parentID;&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetX = descriptor.RigidBodies( k ).offsetx;&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetY = descriptor.RigidBodies( k ).offsety;&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetZ = descriptor.RigidBodies( k ).offsetz;&#xD;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Type = descriptor.RigidBodies( k ).type;&#xD;
+						end&#xD;
+					elseif ( descriptor.type == 3 )&#xD;
+						modelDescription.ForcePlateCount = modelDescription.ForcePlateCount + 1;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Serial = char( descriptor.Serial );&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ID = descriptor.ID;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Width = descriptor.Width;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Length = descriptor.Length;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.X = descriptor.OriginX;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Y = descriptor.OriginY;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Z = descriptor.OriginZ;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CalibrationMatrix = descriptor.CalMatrix;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount = descriptor.Corners.Length;&#xD;
+						for i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount/3&#xD;
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).X = descriptor.Corners( i*3-2 );&#xD;
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Y = descriptor.Corners( i*3-1 );&#xD;
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Z = descriptor.Corners( i*3 );&#xD;
+						end&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).PlateType = descriptor.PlateType;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelDataType = descriptor.ChannelDataType;&#xD;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount = descriptor.ChannelCount;&#xD;
+						for i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount						&#xD;
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Channel( i ).Name = char( descriptor.ChannelNames( i ) );&#xD;
+						end&#xD;
+					elseif (descriptor.type == 4)&#xD;
+						modelDescription.DeviceCount = modelDescription.DeviceCount + 1;&#xD;
+					elseif (descriptor.type == -1 || descriptor.type == 5)&#xD;
+						modelDescription.CameraCount = modelDescription.CameraCount + 1;&#xD;
+					else&#xD;
+						report( obj , 'invalid asset type' )&#xD;
+					end&#xD;
+				end&#xD;
+				report( obj , [ 'number of markersets: ' , num2str( modelDescription.MarkerSetCount ) ] )&#xD;
+				report( obj , [ 'number of rigid bodies: ' , num2str( modelDescription.RigidBodyCount ) ] )&#xD;
+				report( obj , [ 'number of skeletons: ' , num2str( modelDescription.SkeletonCount ) ] )&#xD;
+				report( obj , [ 'number of force plates: ' , num2str( modelDescription.ForcePlateCount ) ] )&#xD;
+				report( obj , [ 'number of devices: ' , num2str( modelDescription.DeviceCount ) ] )&#xD;
+				report( obj , [ 'number of cameras: ' , num2str( modelDescription.CameraCount ) ] )&#xD;
+			else&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % getModelDescription&#xD;
+		&#xD;
+		&#xD;
+		function frameOfMocapData = getFrame( obj )		&#xD;
+			if ( obj.IsConnected == 1 )&#xD;
+				data = obj.Client.GetLastFrameOfData(  );&#xD;
+				frameOfMocapData = data;&#xD;
+			else&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % getFrame&#xD;
+		&#xD;
+&#xD;
+		function frameOfMetaData = getFrameMetaData( obj )	&#xD;
+			persistent data&#xD;
+			if ( obj.IsConnected == 1 )&#xD;
+				data = obj.Client.GetLastFrameOfData(  );&#xD;
+				t.Frame = data.iFrame;&#xD;
+				t.Timestamp = data.fTimestamp;&#xD;
+				t.CameraMidExposureTimestamp = data.CameraMidExposureTimestamp;&#xD;
+				t.CameraDataReceivedTimestamp = data.CameraDataReceivedTimestamp;&#xD;
+				t.TransmitTimestamp = data.TransmitTimestamp;&#xD;
+				t.Recording = data.bRecording;&#xD;
+				t.TrackingModelsChanged = data.bTrackingModelsChanged;&#xD;
+				t.Timecode = data.Timecode;&#xD;
+				t.TimecodeSubframe = data.TimecodeSubframe;&#xD;
+				t.MarkerCount = data.nMarkers;&#xD;
+				t.OtherMarkerCount = data.nOtherMarkers;&#xD;
+				t.MarkerSetCount = data.nMarkerSets;&#xD;
+				t.RigidBodyCount = data.nRigidBodies;&#xD;
+				t.SkeletonCount = data.nSkeletons;&#xD;
+				t.ForcePlateCount = data.nForcePlates;&#xD;
+				t.DeviceCount = data.nDevices;&#xD;
+				frameOfMetaData = t;&#xD;
+			else&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % getFrameOfMetaData&#xD;
+		&#xD;
+	&#xD;
+		function frameOfLabeledMarkerData = getFrameLabeledMarker( obj ) &#xD;
+			if ( obj.IsConnected == 1 )&#xD;
+				data = obj.Client.GetLastFrameOfData(  );&#xD;
+				t.Frame = data.iFrame;&#xD;
+				t.Timestamp = data.fTimestamp;&#xD;
+				t.MarkerCount = data.nMarkers;&#xD;
+				for i = t.MarkerCount : -1 : 1&#xD;
+					t.LabeledMarker( i ).AssetID = int16( bitshift( data.LabeledMarkers( i ).ID , -16 ) );&#xD;
+					t.LabeledMarker( i ).MemberID = int16( bitshift ( bitshift( data.LabeledMarkers( i ).ID , 16 ) , -16 ) );&#xD;
+					t.LabeledMarker( i ).X = data.LabeledMarkers( i ).x;&#xD;
+					t.LabeledMarker( i ).Y = data.LabeledMarkers( i ).y;&#xD;
+					t.LabeledMarker( i ).Z = data.LabeledMarkers( i ).z;&#xD;
+					t.LabeledMarker( i ).Size = data.LabeledMarkers( i ).size;&#xD;
+					%t.LabeledMarker( i ).Occluded = logical( bitget( data.LabeledMarkers( i ).parameters , 1 ) );&#xD;
+					t.LabeledMarker( i ).PointCloudSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 2 ) );&#xD;
+					t.LabeledMarker( i ).AssetSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 3 ) );&#xD;
+					t.LabeledMarker( i ).AssetMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 4 ) );&#xD;
+					t.LabeledMarker( i ).UnlabeledMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 5 ) );&#xD;
+					t.LabeledMarker( i ).ActiveMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 6 ) );&#xD;
+					t.LabeledMarker( i ).Residual = data.LabeledMarkers( i ).residual;&#xD;
+				end&#xD;
+				frameOfLabeledMarkerData = t;&#xD;
+			else&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % getFrameLabeledMarker&#xD;
+		&#xD;
+		&#xD;
+		function frameOfMarkerSetData = getFrameMarkerSet( obj ) &#xD;
+			if ( obj.IsConnected == 1 )&#xD;
+				data = obj.Client.GetLastFrameOfData(  );&#xD;
+				t.Frame = data.iFrame;&#xD;
+				t.Timestamp = data.fTimestamp;&#xD;
+				t.MarkerSetCount = data.nMarkerSets;&#xD;
+				for i = t.MarkerSetCount : -1 : 1&#xD;
+					t.MarkerSet( i ).MarkerSetName = string( data.MarkerSets( i ).MarkerSetName );&#xD;
+					t.MarkerSet( i ).MarkerCount = data.MarkerSets( i ).nMarkers;&#xD;
+					for j = t.MarkerSet( i ).MarkerCount : -1 : 1&#xD;
+						%t.MarkerSet( i ).Marker( j ).AssetID = int16( bitshift( data.MarkerSets( i ).Markers( j ).ID , -16 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).MemberID = int16( bitshift ( bitshift( data.MarkerSets( i ).Markers( j ).ID , 16 ) , -16 ) );&#xD;
+						t.MarkerSet( i ).Marker( j ).X = data.MarkerSets( i ).Markers( j ).x;&#xD;
+						t.MarkerSet( i ).Marker( j ).Y = data.MarkerSets( i ).Markers( j ).y;&#xD;
+						t.MarkerSet( i ).Marker( j ).Z = data.MarkerSets( i ).Markers( j ).z;&#xD;
+						%t.MarkerSet( i ).Marker( j ).Size = data.MarkerSets( i ).Markers( j ).size;&#xD;
+						%t.MarkerSet( i ).Marker( j ).Occluded = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 1 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).PointCloudSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 2 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).AssetSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 3 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).AssetMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 4 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).UnlabeledMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 5 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).ActiveMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 6 ) );&#xD;
+						%t.MarkerSet( i ).Marker( j ).Residual = data.MarkerSets( i ).Markers( j ).residual;&#xD;
+					end&#xD;
+				end&#xD;
+				frameOfMarkerSetData = t;&#xD;
+			else&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % getFrameMarkerSet&#xD;
+		&#xD;
+&#xD;
+		function enable( obj , eListenerIndex )&#xD;
+			if ~isnumeric( eListenerIndex ) || eListenerIndex &lt; 0 || eListenerIndex &gt; obj.MaxListeners&#xD;
+				obj.report( 'invalid index' )&#xD;
+				return&#xD;
+			end&#xD;
+			&#xD;
+			if obj.IsConnected == 0&#xD;
+				return&#xD;
+			end&#xD;
+&#xD;
+			if eListenerIndex == 0&#xD;
+				for k = 1:obj.MaxListeners&#xD;
+					if isa( obj.Listener{ k ,  1} , 'event.listener' ) &amp;&amp; obj.Listener{ k ,  1}.Enabled == false&#xD;
+						obj.Listener{ k , 1  }.Enabled = true;&#xD;
+						obj.report( [ 'listener enabled in slot: ' , num2str( k ) ] )&#xD;
+					end&#xD;
+				end&#xD;
+			else&#xD;
+				if( isa( obj.Listener{ eListenerIndex , 1 } , 'event.listener' ) ) &amp;&amp; obj.Listener{ eListenerIndex , 1 }.Enabled == false&#xD;
+					obj.Listener{ eListenerIndex , 1 }.Enabled = true;&#xD;
+					obj.report( [ 'listener enabled in slot: ' , num2str( eListenerIndex ) ] )&#xD;
+				end&#xD;
+			end&#xD;
+		end % enable&#xD;
+		&#xD;
+&#xD;
+		function disable( obj , dListenerIndex );&#xD;
+			if ~isnumeric( dListenerIndex ) || dListenerIndex &lt; 0 || dListenerIndex &gt; obj.MaxListeners&#xD;
+				obj.report( 'invalid index' );&#xD;
+				return&#xD;
+			end&#xD;
+			&#xD;
+			if obj.IsConnected == 0;&#xD;
+				return&#xD;
+			end&#xD;
+&#xD;
+			if dListenerIndex == 0&#xD;
+				for k = 1:obj.MaxListeners&#xD;
+					if isa( obj.Listener{ k , 1 } , 'event.listener'  )&amp;&amp; obj.Listener{ k ,  1}.Enabled == true;&#xD;
+						obj.Listener{ k }.Enabled = false;&#xD;
+						obj.report( [ 'listener disabled in slot: ' , num2str( k ) ] )&#xD;
+					end&#xD;
+				end&#xD;
+			else&#xD;
+				if( isa( obj.Listener{ dListenerIndex , 1 } , 'event.listener' ) ) &amp;&amp; obj.Listener{ dListenerIndex , 1 }.Enabled == true;&#xD;
+					obj.Listener{ dListenerIndex , 1 }.Enabled = false;&#xD;
+					obj.report( [ 'listener disabled in slot: ' , num2str( dListenerIndex ) ] )&#xD;
+				end&#xD;
+			end&#xD;
+		end % disable&#xD;
+&#xD;
+&#xD;
+		function startRecord( obj )&#xD;
+			obj.sendMessageAndWait( 'StartRecording' );&#xD;
+		end % startRecord&#xD;
+&#xD;
+&#xD;
+		function stopRecord( obj )&#xD;
+			obj.sendMessageAndWait( 'StopRecording' );&#xD;
+		end % stopRecord&#xD;
+&#xD;
+		&#xD;
+		function cycleRecord( obj , iterations , duration , delay )&#xD;
+			if ( isnumeric( iterations ) &amp;&amp; isnumeric( duration ) &amp;&amp; isnumeric( delay ) );&#xD;
+				for i = 1:iterations&#xD;
+					pause( delay );&#xD;
+					obj.startRecord;&#xD;
+					pause( duration );&#xD;
+					obj.stopRecord;&#xD;
+				end&#xD;
+			end&#xD;
+		end % cycleRecord&#xD;
+			&#xD;
+		&#xD;
+		function liveMode( obj )&#xD;
+			obj.sendMessageAndWait( 'LiveMode' );&#xD;
+		end % liveMode&#xD;
+		&#xD;
+		&#xD;
+		function editMode( obj )&#xD;
+			obj.sendMessageAndWait( 'EditMode' );&#xD;
+		end % editMode&#xD;
+		&#xD;
+		&#xD;
+		function startPlayback( obj )&#xD;
+			obj.sendMessageAndWait( 'TimelinePlay' );&#xD;
+		end % startPlayback&#xD;
+		&#xD;
+		&#xD;
+		function stopPlayback( obj )&#xD;
+			obj.sendMessageAndWait( 'TimelineStop' );&#xD;
+		end % stopPlayback&#xD;
+		&#xD;
+		&#xD;
+		function setPlaybackStartFrame( obj , startFrame )&#xD;
+			obj.sendMessageAndWait( [ 'SetPlaybackStartFrame,' , num2str( startFrame ) ] );&#xD;
+		end % setPlaybackStartFrame&#xD;
+				&#xD;
+		&#xD;
+		function setPlaybackEndFrame( obj , endFrame )&#xD;
+			obj.sendMessageAndWait( [ 'SetPlaybackStopFrame,' , num2str( endFrame ) ] );&#xD;
+		end % setPlaybackEndFrame&#xD;
+		&#xD;
+				&#xD;
+		function setPlaybackLooping( obj , val )&#xD;
+			obj.sendMessageAndWait( [ 'SetPlaybackLooping,' , num2str( val ) ] );&#xD;
+		end % stopPlaybackLooping&#xD;
+		&#xD;
+		&#xD;
+		function setPlaybackCurrentFrame( obj , currentFrame )&#xD;
+			obj.sendMessageAndWait( [ 'SetPlaybackCurrentFrame,' , num2str( currentFrame ) ] );&#xD;
+		end % stopPlaybackLooping&#xD;
+				&#xD;
+		&#xD;
+		function setTakeName( obj , name )&#xD;
+			obj.sendMessageAndWait( strcat( 'SetRecordTakeName,' , name ) );&#xD;
+		end % setTakeName&#xD;
+		&#xD;
+		&#xD;
+		function setPlaybackTakeName( obj , name )&#xD;
+			obj.sendMessageAndWait( strcat( 'SetPlaybackTakeName,' , name ) );&#xD;
+		end % setPlaybackTakeName&#xD;
+&#xD;
+		&#xD;
+		function setCurrentSession( obj , name )&#xD;
+            obj.sendMessageAndWait( strcat('SetCurrentSession,' , name) );&#xD;
+		end % setCurrentSession&#xD;
+		&#xD;
+		&#xD;
+		function getMode( obj )&#xD;
+			[ bytearray , rc ] = obj.sendMessageAndWait( 'CurrentMode' );&#xD;
+			if rc == 0&#xD;
+				state = bytearray(1);&#xD;
+				if ( state == 0 )&#xD;
+					obj.Mode = 'Live';&#xD;
+				elseif ( state == 1 )&#xD;
+					obj.Mode = 'Recording';&#xD;
+				elseif ( state == 2 )&#xD;
+					obj.Mode = 'Edit';&#xD;
+				else&#xD;
+					obj.Mode = ' ';&#xD;
+				end&#xD;
+				obj.report( [ 'mode: ' , lower( obj.Mode ) ] )&#xD;
+				return&#xD;
+			else&#xD;
+				obj.Mode = ' ';&#xD;
+			end&#xD;
+		end % getServerState&#xD;
+		&#xD;
+		&#xD;
+		function disconnect( obj )&#xD;
+			obj.disable( 0 );&#xD;
+			for k = 1 : obj.MaxListeners&#xD;
+				if isa( obj.Listener{ k , 1 } , 'event.listener' )&#xD;
+					delete( obj.Listener{ k , 1 } )&#xD;
+				end&#xD;
+			end&#xD;
+			obj.Listener{ obj.MaxListeners , 1 } = [  ];&#xD;
+			if ( isempty( obj.Client ) == 0 )&#xD;
+				obj.Client.Uninitialize;&#xD;
+				obj.Client = [  ];&#xD;
+				if ( obj.IsConnected == 1 )&#xD;
+					report( obj , 'disconnecting' );&#xD;
+				end&#xD;
+				obj.IsConnected = 0;&#xD;
+			end&#xD;
+		end % disconnect&#xD;
+		&#xD;
+		&#xD;
+		function delete( obj )&#xD;
+			obj.disconnect&#xD;
+		end % delete - destructor&#xD;
+	end % methods ( Access = public )&#xD;
+&#xD;
+	&#xD;
+	methods ( Access = private )&#xD;
+		function getLastAssemblyPath( obj )&#xD;
+			pathtomfile = mfilename( 'fullpath' );&#xD;
+			mfile = mfilename(  );&#xD;
+			mfilenamelength = length( mfile );&#xD;
+			foldertomfile = pathtomfile( 1 : end-mfilenamelength );&#xD;
+			obj.LastAssemblyPathFile = strcat( foldertomfile , 'assemblypath.txt' );&#xD;
+			if ( exist( obj.LastAssemblyPathFile , 'file' ) == 2 )&#xD;
+				assemblypath = textread( obj.LastAssemblyPathFile , '%s' );&#xD;
+				assemblypath = strjoin( assemblypath );&#xD;
+				if( exist( assemblypath , 'file' ) == 2)&#xD;
+					obj.AssemblyPath = assemblypath;&#xD;
+				end&#xD;
+			end	&#xD;
+		end % getLastAssemblyPath&#xD;
+		&#xD;
+		&#xD;
+		function getAssemblies( obj )&#xD;
+			obj.IsAssemblyLoaded = 0;&#xD;
+			obj.Assembly = [  ];&#xD;
+			obj.AssemblyVersion = [  ];&#xD;
+			domain = System.AppDomain.CurrentDomain;&#xD;
+			assemblies = domain.GetAssemblies;&#xD;
+			assembly{ assemblies.Length , 1 } = [  ];&#xD;
+			for i = 1:assemblies.Length&#xD;
+				assembly{ i } = assemblies.Get( i-1 );&#xD;
+				obj.Assembly{ i } = char( assembly{ i }.FullName );&#xD;
+				if ( strncmp ( obj.Assembly{ i } , 'NatNetML' , 8 ) )&#xD;
+					aver = regexp( obj.Assembly{ i } , '\d+' , 'match' );&#xD;
+					obj.AssemblyVersion = strcat( aver{ 1 } , '.' , aver{ 2 } , '.' , aver{ 3 } , '.' , aver{ 4 } );&#xD;
+					obj.IsAssemblyLoaded = 1;&#xD;
+				end&#xD;
+			end&#xD;
+		end % getAssemblies&#xD;
+				&#xD;
+		&#xD;
+		function addAssembly( obj )&#xD;
+			if ( exist( obj.AssemblyPath , 'file' ) == 2 )&#xD;
+				[ ~ ] = NET.addAssembly( obj.AssemblyPath );&#xD;
+				obj.IsAssemblyLoaded = 1;&#xD;
+			else&#xD;
+				obj.IsAssemblyLoaded = 0;&#xD;
+				report( obj , 'failed to add NatNetML.dll assembly' );&#xD;
+			end&#xD;
+		end % addAssembly&#xD;
+        &#xD;
+        &#xD;
+		function setAssemblyPath( obj )&#xD;
+			[ name , path ] =	uigetfile( '*.dll' , 'Select the NatNetML.dll assembly - NatNetLib.dll is a dependency' );&#xD;
+			if ( strcmpi( name , 'NatNetML.dll') == 1 )&#xD;
+				assemblyPath = strcat( path , name );&#xD;
+				textAssemblyPath = strrep( assemblyPath , '\' , '\\' );&#xD;
+				fileid = fopen( obj.LastAssemblyPathFile , 'wt');&#xD;
+				fprintf( fileid , '%s' , assemblyPath );&#xD;
+				fclose( fileid );&#xD;
+				if ( obj.IsAssemblyLoaded == 0 )&#xD;
+					obj.AssemblyPath = assemblyPath;&#xD;
+					obj.report( [ 'defined assembly path: ' , textAssemblyPath ] ) &#xD;
+				else&#xD;
+					obj.report( [ 'redefined assembly path: ' , textAssemblyPath ] ) &#xD;
+					obj.report( 'restart matlab to apply the changes' )&#xD;
+				end&#xD;
+			else&#xD;
+				obj.report( 'invalid assembly path in function setAssemblyPath' )&#xD;
+			end&#xD;
+		end % setAssemlbyPath&#xD;
+		&#xD;
+		&#xD;
+		function report( obj , message )&#xD;
+			if ( obj.IsReporting == 1 )&#xD;
+				ctime = strsplit( num2str( clock ) );&#xD;
+				disp( sprintf ( [ ctime{ 1 } , '/' , ctime{ 2 } , '/' , ctime{ 3 } , '  ' , ctime{ 4 } , ':' , ctime{ 5 } , ':' , ctime{ 6 } , '  ' , 'natnet - ' , message ] ) )&#xD;
+			end&#xD;
+		end % report&#xD;
+		&#xD;
+		&#xD;
+		function validIP = checkip( obj , value )&#xD;
+			if ( ischar( value ) &amp;&amp; length( value ) &lt; 16 &amp;&amp; length( value ) &gt; 6 )&#xD;
+				val = strsplit( value , '.' );&#xD;
+				if ( length( val ) == 4 )&#xD;
+					if all( isstrprop( val{ 1 } , 'digit' ) ) &amp;&amp; all( isstrprop( val{ 2 } , 'digit' ) )...&#xD;
+							&amp;&amp; all( isstrprop( val{ 3 } , 'digit' ) ) &amp;&amp; all( isstrprop( val{ 4 } , 'digit' ) )...&#xD;
+							&amp;&amp; length( val{ 1 } ) &lt; 4 &amp;&amp; length( val{ 2 } ) &lt; 4 &amp;&amp;  length( val{ 3 } ) &lt; 4 &amp;&amp; length( val{ 4 } ) &lt; 4 ...&#xD;
+							&amp;&amp; ~isempty( val{ 1 } ) &amp;&amp; ~isempty( val{ 2 } ) &amp;&amp;  ~isempty( val{ 3 } ) &amp;&amp; ~isempty( val{ 4 } ) ...&#xD;
+							&amp;&amp; str2double( val{ 1 } ) &lt; 256 &amp;&amp; str2double( val{ 2 } ) &lt; 256 &amp;&amp; str2double( val{ 3 } ) &lt; 256 &amp;&amp; str2double( val{ 4 } ) &lt; 256 ...&#xD;
+							&amp;&amp; str2double( val{ 1 } ) &gt;= 0  &amp;&amp; str2double( val{ 2 } ) &gt;= 0 &amp;&amp; str2double( val{ 3 } ) &gt;= 0 &amp;&amp; str2double( val{ 4 } ) &gt;= 0&#xD;
+						validIP = value;&#xD;
+					else&#xD;
+						report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )&#xD;
+						validIP = [  ];&#xD;
+					end&#xD;
+				else	&#xD;
+					report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )&#xD;
+					validIP = [  ];&#xD;
+				end&#xD;
+			else&#xD;
+				report( obj , 'invalid string for ip address (e.x. 127.0.0.1)' )&#xD;
+				validIP = [  ];&#xD;
+			end&#xD;
+		end % validIP&#xD;
+		&#xD;
+		&#xD;
+		function [ bytearray , rc ] = sendMessageAndWait( obj , cmd )&#xD;
+			if ( obj.IsConnected == 1 );&#xD;
+				[ bytearray , rc ] = obj.Client.SendMessageAndWait( cmd );&#xD;
+				if ( rc == 0 )&#xD;
+					return&#xD;
+				else&#xD;
+					obj.report( 'command failed due to an unknown error' )				&#xD;
+				end&#xD;
+			else&#xD;
+				bytearray = '';&#xD;
+				rc = '';&#xD;
+				obj.report( 'connection not established' )&#xD;
+			end&#xD;
+		end % sendMessageAndWait&#xD;
+	end % methods ( Access = private )&#xD;
+end % classdef natnet &lt; handle&#xD;
+</originalCode><m-file>natnet</m-file><filename>C:\Users\jtmil\OneDrive\Documents\MATLAB\S-Kubed\NatNetSDK\Samples\Matlab\natnet.m</filename><outputdir>C:\Users\jtmil\OneDrive\Documents\MATLAB\S-Kubed\NatNetSDK\Samples\Matlab\html</outputdir></mscript>
