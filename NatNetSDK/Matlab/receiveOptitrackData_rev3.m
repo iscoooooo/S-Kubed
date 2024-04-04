@@ -30,7 +30,8 @@ Files required (not .m)        : saveToCSV.m
 User-defined functions         : none
 %}
 
-function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
+function [rigidBodyX,rigidBodyY,rigidBodyZ,rigidBodyRoll,rigidBodyPitch, ...
+    rigidBodyYaw,frameData,timeData] = ...
     receiveOptitrackData_rev3(csvFileName, numFrames)
 
 fprintf('NatNet Polling Sample Start\n')
@@ -55,6 +56,8 @@ end
 % get the asset descriptions for the asset names
 model = natnetclient.getModelDescription;
 if (model.RigidBodyCount < 1)
+    fprintf("\nNo rigid bodies detected/selected. Ensure that there is a " + ...
+        "rigid body selected under assets in the right pane of the motive software\n\n")
     return
 end
 
@@ -68,15 +71,6 @@ rigidBodyZ  = zeros(numFrames, model.RigidBodyCount);
 rigidBodyRoll = zeros(numFrames, model.RigidBodyCount);
 rigidBodyPitch = zeros(numFrames, model.RigidBodyCount);
 rigidBodyYaw = zeros(numFrames, model.RigidBodyCount);
-
-% % Vertical offset (also need to include distance to vertical distance to
-% % geometric center of rigid body)
-% offset = -327.45; % [mm]
-
-% Define the rotation matrix for a 90-degree rotation about the x-axis 
-Rx = [1,      0          0    ;
-      0   cosd(90)  -sind(90) ;
-      0   sind(90)   cosd(90)];
 
 % Plotting setup
 figure('WindowStyle', 'docked'); % 'docked' to dock the figure
@@ -127,7 +121,7 @@ for idx = 1:numFrames
         rigidBodyNames{i} = model.RigidBody(i).Name;
 
         % Positions
-        rigidBodyXYZ = Rx*[data.RigidBodies(i).x; data.RigidBodies(i).y;
+        rigidBodyXYZ = [data.RigidBodies(i).x; data.RigidBodies(i).y;
             data.RigidBodies(i).z];
         rigidBodyX(idx, i) = rigidBodyXYZ(1) * 1000;
         rigidBodyY(idx, i) = rigidBodyXYZ(2) * 1000;
@@ -136,8 +130,6 @@ for idx = 1:numFrames
         % Quaternions
         q = quaternion(data.RigidBodies(i).qw, data.RigidBodies(i).qx, ...
             data.RigidBodies(i).qy, data.RigidBodies(i).qz);
-        qRot = quaternion( 0, 0, 0, 1);
-        q = mtimes( q, qRot);
 
         % Convert quaternion to Euler angles using 3-2-1 sequence
         eulerAngles = q.EulerAngles('ZYX');
@@ -167,10 +159,10 @@ for idx = 1:numFrames
         
         % Dynamically move the axis of the graph
         subplot(2,1,1)
-        axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -500 , 500 ] );
+        axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -75 , 75 ] );
 
         subplot(2,1,2)
-    	axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -180 , 180 ] );
+    	axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -30 , 30 ] );
         drawnow;
     end
 end
