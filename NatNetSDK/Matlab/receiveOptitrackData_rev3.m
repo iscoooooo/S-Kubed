@@ -69,6 +69,10 @@ rigidBodyRoll = zeros(numFrames, model.RigidBodyCount);
 rigidBodyPitch = zeros(numFrames, model.RigidBodyCount);
 rigidBodyYaw = zeros(numFrames, model.RigidBodyCount);
 
+% % Vertical offset (also need to include distance to vertical distance to
+% % geometric center of rigid body)
+% offset = -327.45; % [mm]
+
 % Plotting setup
 figure('WindowStyle', 'docked'); % Set WindowStyle property to 'docked' to dock the figure
 subplot(2, 1, 1);
