@@ -69,8 +69,13 @@ rigidBodyRoll = zeros(numFrames, model.RigidBodyCount);
 rigidBodyPitch = zeros(numFrames, model.RigidBodyCount);
 rigidBodyYaw = zeros(numFrames, model.RigidBodyCount);
 
+% Define the rotation matrix for a 90-degree rotation about the x-axis 
+Rx = [1,      0          0    ;
+      0   cosd(90)  -sind(90) ;
+      0   sind(90)   cosd(90)];
+
 % Plotting setup
-figure('WindowStyle', 'docked'); % Set WindowStyle property to 'docked' to dock the figure
+figure('WindowStyle', 'docked'); % 'docked' to dock the figure
 subplot(2, 1, 1);
 hold on;
 posPlotX = plot(nan, nan, 'r-');
@@ -114,18 +119,25 @@ for idx = 1:numFrames
     fprintf('Time:%0.2f\n', timeData(idx))
 
     for i = 1:model.RigidBodyCount
+        
         rigidBodyNames{i} = model.RigidBody(i).Name;
+
         % Positions
-        rigidBodyX(idx, i) = data.RigidBodies(i).x * 1000;
-        rigidBodyY(idx, i) = data.RigidBodies(i).y * 1000;
-        rigidBodyZ(idx, i) = data.RigidBodies(i).z * 1000;
+        rigidBodyXYZ = Rx*[data.RigidBodies(i).x; data.RigidBodies(i).y;
+            data.RigidBodies(i).z];
+        rigidBodyX(idx, i) = rigidBodyXYZ(1) * 1000;
+        rigidBodyY(idx, i) = rigidBodyXYZ(2) * 1000;
+        rigidBodyZ(idx, i) = rigidBodyXYZ(3) * 1000;
+
         % Quaternions
         q = quaternion(data.RigidBodies(i).qw, data.RigidBodies(i).qx, ...
             data.RigidBodies(i).qy, data.RigidBodies(i).qz);
         qRot = quaternion( 0, 0, 0, 1);
         q = mtimes( q, qRot);
+
         % Convert quaternion to Euler angles using 3-2-1 sequence
         eulerAngles = q.EulerAngles('ZYX');
+
         % Extract Euler angles
         rigidBodyRoll(idx, i) = eulerAngles(1)* -180/pi;
         rigidBodyPitch(idx, i) = eulerAngles(2)* 180/pi;
