@@ -1,7 +1,7 @@
 clear;clc;close all
 
 % %%%% EDITABLE %%%%%%%
-numFrames = 100;
+numFrames = 200;
 csvFileName = 'eulerTest';
 
 % %%% DO NOT EDIT %%%%%%
@@ -18,5 +18,6 @@ csvFileName = csvFileName + "_" + str + ".csv";
 fullFileName = fullfile(relativeDirectory,csvFileName);
 
 % Begin polling and saving data
-[rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
+[rigidBodyX,rigidBodyY,rigidBodyZ,rigidBodyRoll,rigidBodyPitch, ...
+    rigidBodyYaw,frameData,timeData] = ...
     receiveOptitrackData_rev3(fullFileName, numFrames);

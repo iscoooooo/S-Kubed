@@ -30,7 +30,8 @@ Files required (not .m)        : saveToCSV.m
 User-defined functions         : none
 %}
 
-function [rigidBodyX,rigidBodyY,rigidBodyZ,frameData,timeData] = ...
+function [rigidBodyX,rigidBodyY,rigidBodyZ,rigidBodyRoll,rigidBodyPitch, ...
+    rigidBodyYaw,frameData,timeData] = ...
     receiveOptitrackData_rev3(csvFileName, numFrames)
 
 fprintf('NatNet Polling Sample Start\n')
@@ -55,6 +56,8 @@ end
 % get the asset descriptions for the asset names
 model = natnetclient.getModelDescription;
 if (model.RigidBodyCount < 1)
+    fprintf("\nNo rigid bodies detected/selected. Ensure that there is a " + ...
+        "rigid body selected under assets in the right pane of the motive software\n\n")
     return
 end
 
@@ -70,7 +73,7 @@ rigidBodyPitch = zeros(numFrames, model.RigidBodyCount);
 rigidBodyYaw = zeros(numFrames, model.RigidBodyCount);
 
 % Plotting setup
-figure('WindowStyle', 'docked'); % Set WindowStyle property to 'docked' to dock the figure
+figure('WindowStyle', 'docked'); % 'docked' to dock the figure
 subplot(2, 1, 1);
 hold on;
 posPlotX = plot(nan, nan, 'r-');
@@ -107,27 +110,34 @@ for idx = 1:numFrames
         return
     end
 
-    frameData(idx) = data.iFrame;
-    timeData(idx) = data.fTimestamp;
+    frameData(idx) = idx;
+    timeData(idx) = data.fTimestamp - timeData(1);
 
     fprintf('Frame:%6d  ', frameData(idx))
     fprintf('Time:%0.2f\n', timeData(idx))
 
     for i = 1:model.RigidBodyCount
+        
         rigidBodyNames{i} = model.RigidBody(i).Name;
+
         % Positions
-        rigidBodyX(idx, i) = data.RigidBodies(i).x * 1000;
-        rigidBodyY(idx, i) = data.RigidBodies(i).y * 1000;
-        rigidBodyZ(idx, i) = data.RigidBodies(i).z * 1000;
+        rigidBodyXYZ = [data.RigidBodies(i).x; data.RigidBodies(i).y;
+            data.RigidBodies(i).z];
+        rigidBodyX(idx, i) = rigidBodyXYZ(1) * 1000;
+        rigidBodyY(idx, i) = rigidBodyXYZ(2) * 1000;
+        rigidBodyZ(idx, i) = rigidBodyXYZ(3) * 1000;
+
         % Quaternions
         q = quaternion(data.RigidBodies(i).qw, data.RigidBodies(i).qx, ...
             data.RigidBodies(i).qy, data.RigidBodies(i).qz);
+
         % Convert quaternion to Euler angles using 3-2-1 sequence
         eulerAngles = q.EulerAngles('ZYX');
+
         % Extract Euler angles
-        rigidBodyRoll(idx, i) = eulerAngles(1)*180/pi;
-        rigidBodyPitch(idx, i) = eulerAngles(2)*180/pi;
-        rigidBodyYaw(idx, i) = eulerAngles(3)*180/pi;
+        rigidBodyRoll(idx, i) = eulerAngles(1)* -180/pi;
+        rigidBodyPitch(idx, i) = eulerAngles(2)* 180/pi;
+        rigidBodyYaw(idx, i) = eulerAngles(3)* -180/pi;
 
         % Command Window Output
         fprintf('Name:"%s"  ', rigidBodyNames{i})
@@ -146,9 +156,18 @@ for idx = 1:numFrames
         set(anglePlotRoll, 'XData', 1:numFrames, 'YData', rigidBodyRoll(:,1)');
         set(anglePlotPitch, 'XData', 1:numFrames, 'YData', rigidBodyPitch(:,1)');
         set(anglePlotYaw, 'XData', 1:numFrames, 'YData', rigidBodyYaw(:,1)');
+        
+        % Dynamically move the axis of the graph
+        subplot(2,1,1)
+        axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -75 , 75 ] );
+
+        subplot(2,1,2)
+    	axis( [ -50 + frameData(idx) , 20 + frameData(idx) , -30 , 30 ] );
         drawnow;
     end
 end
+
+timeData(1) = 0;
 
 disp('NatNet Polling Sample End')
 
