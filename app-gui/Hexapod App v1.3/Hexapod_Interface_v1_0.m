@@ -1,11 +1,11 @@
 %% S-Kubed Hexapod Interfacing
-% Last Revised: 3/7/24
+% Last Revised: 3/26/24
 % Andre Turpin
 
 
 clc; clearvars -except C887 Controller devicesTcpIp ip matlabDriverPath port stageType use_TCPIP_Connection
 
-app = MainApp
+app = MainApp;
 
 %Initialize and zero variables for App Input
 switch_status = 'Off';
@@ -19,7 +19,24 @@ slider_max = 10;
 
 pause(3) % Wait for app to load
 
-%~~~~~~~~~~~~~~~~ Check & Connect to Hexapod ~~~~~~~~~~~~~~~~%
+    while isvalid(app)
+    activeTabTitle = app.TabGroup.SelectedTab.Title;
+    switch activeTabTitle
+        case 'Hexapod (PI/GSC)' % Replace 'Tab1Title' with the actual title of your tab
+            disp('Tab 1 is active');
+            pause (1)
+        case 'Data Comparison' % Ditto for 'Tab2Title'
+            disp('Tab 2 is active');
+             pause (1)
+       
+    end
+
+
+    end
+
+
+
+%% %~~~~~~~~~~~~~~~~ Check & Connect to Hexapod ~~~~~~~~~~~~~~~~%
 disp('Checking connection with Hexapod...');
 pause(1)
 
@@ -260,6 +277,9 @@ end
 
 
 
+
+
+%% Test
 
 
 
