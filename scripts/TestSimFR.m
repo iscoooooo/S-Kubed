@@ -42,9 +42,9 @@ disp('Controller Connected')
 
 %% Hexapod Movement Function
 
-<<<<<<< HEAD
+
 hexsim(C887, false, 1, false, true)
-=======
+
 % C887 passes the controller from the workspace to the function.
 % -- 'simulationBool' shows a quick simulation of the hexapod with fluid
 % movements.
@@ -56,7 +56,7 @@ hexsim(C887, false, 1, false, true)
 % ---- Executes movement, then returns to 0 position 5 seconds after.
 
 hexsim(C887, false, 1, 1, false, true)
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
+
 
 function hexsim(C887, simulationBool, iterations, centerBool, movement)
     
@@ -94,10 +94,9 @@ function hexsim(C887, simulationBool, iterations, centerBool, movement)
             C887.MOV(u, 0);
             C887.MOV(v, 0);
             pause(1);
-<<<<<<< HEAD
 
-=======
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
+
+
             disp('Translational Motion (X and Y axes)')
             for i = 1:iterations*5
                 for i = 1:length(xvalTrans)
@@ -110,20 +109,18 @@ function hexsim(C887, simulationBool, iterations, centerBool, movement)
             C887.MOV(x, 0);
             C887.MOV(y, 0);
             pause(1)
-<<<<<<< HEAD
 
             disp('Translation and Rotational (Z and W axes)')
             for i = 1:iterations*5
                 for i = 1:length(xvalTrans)
                     C887.MOV(x, xvalTrans(i));
                     C887.MOV(y, yvalTrans(i));
-=======
+
             disp('Translation and Rotational (Z and W axes)')
             for i = 1:iterations*5
                 for i = 1:length(xvalRandR)
                     C887.MOV(x, xvalRandR(i));
                     C887.MOV(y, yvalRandR(i));
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
                     pause(0.12)
                 end
             end
@@ -131,25 +128,24 @@ function hexsim(C887, simulationBool, iterations, centerBool, movement)
             C887.MOV(x, 0);
             C887.MOV(y, 0);
             pause(1)
-<<<<<<< HEAD
 
-=======
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
+
+
         end
     end
 while true
     if movement == true
-<<<<<<< HEAD
+
         axes = sort(input('Enter Axes of Movement: ', 's'));
         if length(axes) < 4
             maxAxes = maximumMovements(axes);
         elseif axes == 'Break'
             break;
-=======
+
         axes = sort(input('Enter Axes of Movement (All uppercase, no spaces): ', 's'));
         if length(axes) < 4
             maxAxes = maximumMovements(axes);
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
+
         end
         message = sprintf('Maximum movement in any axis is %d\n', maxAxes);
         disp(message)
@@ -184,11 +180,11 @@ while true
         elseif length(axes) == 1
             C887.MOV(axes(1), movements(1));
         end
-<<<<<<< HEAD
+
         pause(3)
-=======
+
         pause(5)
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
+
         if length(axes) == 4
             C887.MOV(axes(1), 0);
             C887.MOV(axes(2), 0);
@@ -206,13 +202,12 @@ while true
         end
         pause(3)
     end
-end
-    
+    end  
+   
     function max = maximumMovements(axes)
     % 3 Axes of Movement describe maximum millimeters of movement in any
     % axis direction. Ex. 'XYZ': Output: 20 mm (20 mm x, 20 mm y, 20 mm z)
-<<<<<<< HEAD
-=======
+
     if length(axes) == 5
         axesToMaxMap = containers.Map({'UVWXY', 'UVWXZ', 'UVWYZ', 'UVXYZ',...
             'UWXYZ', 'VWXYZ'}, ...
@@ -233,7 +228,6 @@ end
         end
     end
 
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
     if length(axes) == 3
         axesToMaxMap = containers.Map( {'UVW', 'UVX', 'UVY', 'UVZ', 'UWX',...
             'UWY', 'UWZ', 'UXY', 'UXZ', 'UYZ', 'VWX', 'VWY', 'VWZ', 'VXY',...
@@ -253,11 +247,7 @@ end
             max = axesToMaxMap(axes);
         end
     end
-<<<<<<< HEAD
-    
-=======
 
->>>>>>> 313d4e16a8a2df6e2aaed780051d210199bfa9f6
     if length(axes) == 1
         axesToMaxMap = containers.Map({'X', 'Y', 'Z', 'U', 'V', 'W'}, ...
             [50, 50, 25, 14, 14, 25]);
