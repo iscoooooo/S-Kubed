@@ -1,0 +1,761 @@
+<?xml version="1.0"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"><article xml:base="file:///C:/Users/jtmil/OneDrive/Documents/MATLAB/S-Kubed/NatNetSDK/Samples/Matlab/html/"><!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+--><section><title/><programlisting><mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% Copyright © 2019 Naturalpoint</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	Not for Redistribution</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	NatNet Matlab Class</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	Requires Matlab 2019a or later</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	This class is a wrapper for the NatNetML assembly and controls the</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	connection and communication between the OptiTrack NatNet Server and</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	Matlab clients.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	Public Properties:</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		ClientIP - The IP address of the client network.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		ConnectionType - Multicast of Unicast</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		HostIP - The IP address of the host/server network.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		IsReporting - state of commandline reporting</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		IsConnected - state of connection to server, updated only when</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%					establishing a connection. (Read-only)</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		Mode - state of the Motive server, Live or Edit. (Read-Only)</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		Version - version number of the natnet libraries. (Read-Only)</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		FrameRate - sampling rate of the Motive hardware. (Read-Only)</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%	Public Methods:</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		natnet - Object Constructor</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		connect - Establish a connection to an OptiTrack NatNet Server</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		disconnect - Close a connection to an OptiTrack NatNet Server</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		addlistener - Links a callback function to the server stream.</mwsh:comments>
+
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getFrameRate - Returns the server Frame Rate.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getModelDescription - Returns a structure of the asset list.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getFrame - Returns the latest frame of mocap data.</mwsh:comments>
+
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getFrameMetaData - Returns last frame of meta data within mocap</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%			frame. Return value is a Matlab struct</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getFrameMarkerSet - Returns the last frame of MarkerSet data</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%			within mocap frame. Return value is a Matlab struct</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getFrameLabeledMarker - Returns the last frame of LabeledMarker</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%			data within the mocap frame. Return value is a Matlab</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%			struct.</mwsh:comments>
+
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		getMode - Returns the state of the server: Live or Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		enable - Enables execution of a linked callback function.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		disable - Disabled execution of a linked callback function.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		Server Commands</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		startRecord - Starts a recording on the server.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		stopRecord - Stops a recording on the server.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		cycleRecord - Loops recording.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		liveMode - Changes the server to Live mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		editMode - Changes the server to Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		startPlayback - Starts playback of the server in Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		stopPlayback - Stops playback of the server in Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setPlaybackStartFrame - Sets the playback loop start frame.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setPlaybackEndFrame - Sets the playback loop end frame.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setPlaybackLooping - Sets playback to loop.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setPlaybackCurrentFrame - Sets the current frame in Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setTakeName - Sets the pending (to be recorded) take name.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setPlaybackTakeName - Opens a recorded take in Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		setCurrentSession - Changes the current folder in Edit mode.</mwsh:comments>
+<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%		delete - Destructor for the natnet class</mwsh:comments>
+
+<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">classdef</mwsh:keywords> natnet &lt; handle
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">properties</mwsh:keywords> ( Access = public )
+		ClientIP
+		ConnectionType
+		HostIP
+		IsReporting
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% properties ( Access = public )</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">properties</mwsh:keywords> ( SetAccess = private )
+		IsConnected
+		Mode
+		Version
+		FrameRate
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% properties ( SetAccess = private )</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">properties</mwsh:keywords> ( Access = private )
+		Assembly
+		AssemblyPath
+		AssemblyVersion
+		Client
+		IsAssemblyLoaded
+		LastAssemblyPathFile
+		MaxListeners
+		Listener
+		CReattempt
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% properties ( Access = private )</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">properties</mwsh:keywords> ( Access = private , Dependent = true )
+		iConnectionType
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% properties ( Access = private , Dependant = true )</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">methods</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> set.HostIP( obj , val )
+			validIP = obj.checkip( val);
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.HostIP = validIP;
+				obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'set host ip address: '</mwsh:strings> , validIP ] )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% set.HostIP</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> set.ClientIP( obj , val )
+			validIP = obj.checkip( val );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( ~isempty( validIP ) )
+				obj.disconnect
+				obj.ClientIP = validIP;
+				obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'set client ip address: '</mwsh:strings> , validIP ] )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% set.ClientIP</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> set.ConnectionType( obj , val )
+			obj.disconnect
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( strcmpi( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Multicast'</mwsh:strings> , val ) == 1 )
+				obj.ConnectionType = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Multicast'</mwsh:strings>;
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'set multicast'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( strcmpi( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Unicast'</mwsh:strings> , val ) == 1 )
+				obj.ConnectionType = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Unicast'</mwsh:strings>;
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'set unicast'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid connection type'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% set.ConnectionType</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> set.IsReporting( obj , val )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( val == 1 )
+				obj.IsReporting = 1;
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'reporting enabled'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( val == 0 )
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'reporting disabled'</mwsh:strings> )
+				obj.IsReporting = 0;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% set.IsReporting</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> iconnectiontype = get.iConnectionType( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( strcmpi( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Multicast'</mwsh:strings> , obj.ConnectionType ) == 1 )
+				iconnectiontype = 0;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( strcmpi( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Unicast'</mwsh:strings> , obj.ConnectionType ) == 1 )
+				iconnectiontype = 1;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% iconnectiontype</mwsh:comments>
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% methods ( property set and get methods)</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">methods</mwsh:keywords> ( Access = public  )
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> obj = natnet(  )
+			obj.getLastAssemblyPath
+			obj.MaxListeners = 255;
+			obj.Listener{ obj.MaxListeners , 1 } = [ ];
+			obj.FrameRate = 0;
+			obj.IsAssemblyLoaded = 0;
+			obj.IsConnected = 0;
+			obj.IsReporting = 0;
+			obj.CReattempt = 1;
+			obj.HostIP = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'127.0.0.1'</mwsh:strings>;
+			obj.ClientIP = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'127.0.0.1'</mwsh:strings>;
+			obj.ConnectionType = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Multicast'</mwsh:strings>;
+			obj.Version = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">' '</mwsh:strings>;
+			obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">' '</mwsh:strings>;
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% natnet - constructor</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> connect( obj )
+			obj.disconnect
+			obj.getAssemblies
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( isempty( obj.AssemblyPath ) )
+					obj.setAssemblyPath
+					obj.addAssembly
+					obj.getAssemblies
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.addAssembly
+					obj.getAssemblies
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+				report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'natnetml assembly is missing or undefined'</mwsh:strings> )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">try</mwsh:keywords>
+				obj.Client = NatNetML.NatNetClientML( obj.iConnectionType );
+				v = obj.Client.NatNetVersion(  );
+				obj.Version = sprintf( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'%d.%d.%d.%d'</mwsh:strings>, v( 1 ) , v( 2 ) , v( 3 ) , v( 4 ) );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords>  ( isempty( obj.Client ) == 1 || obj.IsAssemblyLoaded == 0 )
+					obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'client object invalid'</mwsh:strings> )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'natnet version: '</mwsh:strings> , obj.Version ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				flg = obj.Client.Initialize( obj.ClientIP , obj.HostIP );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> flg == 0
+					obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'client initialized'</mwsh:strings> )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'initialization failed'</mwsh:strings> )
+					obj.IsConnected = 0;
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">catch</mwsh:keywords> exception
+				rethrow(exception)
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			[ ~ , rc] = obj.Client.SendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'FrameRate'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> rc == 0
+				obj.IsConnected = 1;
+				obj.getFrameRate
+				obj.getMode
+				obj.getModelDescription;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords>( rc == 1 )
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection failed due to an internal error'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( rc == 2 )
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection failed due to an external error'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( rc == 3 )
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection failed due to a network error'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection failed due to an unknown error'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			obj.IsConnected = 0;
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% connect</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> addlistener( obj , aListenerIndex , functionhandlestring )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ~isnumeric( aListenerIndex ) || aListenerIndex &lt; 1 || aListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid index'</mwsh:strings> );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> isa( functionhandlestring , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'char'</mwsh:strings> ) &amp;&amp; ~isempty( which( functionhandlestring ) )
+				functionhandle = str2func ( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'@( src , evnt)'</mwsh:strings> , functionhandlestring , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'( src , evnt)'</mwsh:strings> ] );
+
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ~isa( obj.Listener{ aListenerIndex , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> )
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'adding listener in slot:'</mwsh:strings> , num2str(aListenerIndex ) ] );
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'OnFrameReady2'</mwsh:strings> , functionhandle );
+					obj.disable( aListenerIndex );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> isa( obj.Listener{ aListenerIndex , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> )
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'replacing listener in slot: '</mwsh:strings> , num2str(aListenerIndex ) ] )
+					obj.disable( aListenerIndex )
+					delete( obj.Listener{ aListenerIndex , 1 } )
+					obj.Listener{ aListenerIndex , 1 } = addlistener( obj.Client, <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'OnFrameReady2'</mwsh:strings> , functionhandle );
+					obj.disable ( aListenerIndex )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid function set for slot: '</mwsh:strings> , num2str( aListenerIndex ) ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% addlistener</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> getFrameRate( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'FrameRate'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> rc == 0
+				bytearray = uint8( bytearray );
+				obj.FrameRate =  typecast( bytearray , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'single'</mwsh:strings> );
+				obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'frame rate: '</mwsh:strings> , num2str( obj.FrameRate ) , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">' fps'</mwsh:strings> ] )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.FrameRate = 0;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getFrameRate</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> modelDescription = getModelDescription( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				dataDescriptions = obj.Client.GetDataDescriptions(  );
+				modelDescription.TrackingModelCount = dataDescriptions.Count;
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of trackables: '</mwsh:strings> , num2str( dataDescriptions.Count ) ] )
+				modelDescription.MarkerSetCount = 0;
+				modelDescription.RigidBodyCount = 0;
+				modelDescription.SkeletonCount = 0;
+				modelDescription.ForcePlateCount = 0;
+				modelDescription.DeviceCount = 0;
+				modelDescription.CameraCount = 0;
+
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = 1 : modelDescription.TrackingModelCount
+					descriptor = dataDescriptions.Item( i - 1 );
+					<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% marker sets</mwsh:comments>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( descriptor.type == 0)
+						modelDescription.MarkerSetCount = modelDescription.MarkerSetCount + 1;
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Name = char( descriptor.Name );
+						modelDescription.MarkerSet( modelDescription.MarkerSetCount ).MarkerCount = descriptor.nMarkers;
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> k = 1 : descriptor.nMarkers
+							modelDescription.MarkerSet( modelDescription.MarkerSetCount ).Markers( k ).Label = char( descriptor.MarkerNames( k ) );
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+					<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% rigid bodies</mwsh:comments>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( descriptor.type == 1 )
+						modelDescription.RigidBodyCount = modelDescription.RigidBodyCount + 1;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Name = char( descriptor.Name );
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ID = descriptor.ID ;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).ParentID = descriptor.parentID;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).OffsetX = descriptor.offsetx;
+						modelDescription.RigidBody( modelDescription.RigidBodyCount ).Type = descriptor.type;
+					<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% skeletons</mwsh:comments>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( descriptor.type == 2 )
+						modelDescription.SkeletonCount = modelDescription.SkeletonCount + 1;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).Name = char( descriptor.Name );
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).ID = descriptor.ID;
+						modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount = descriptor.nRigidBodies;
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> k = 1 : modelDescription.Skeleton( modelDescription.SkeletonCount ).SegmentCount
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Name = char( descriptor.RigidBodies( k ).Name );
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ID = descriptor.RigidBodies( k ).ID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).ParentID = descriptor.RigidBodies( k ).parentID;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetX = descriptor.RigidBodies( k ).offsetx;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetY = descriptor.RigidBodies( k ).offsety;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).OffsetZ = descriptor.RigidBodies( k ).offsetz;
+							modelDescription.Skeleton( modelDescription.SkeletonCount ).Segment( k ).Type = descriptor.RigidBodies( k ).type;
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( descriptor.type == 3 )
+						modelDescription.ForcePlateCount = modelDescription.ForcePlateCount + 1;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Serial = char( descriptor.Serial );
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ID = descriptor.ID;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Width = descriptor.Width;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Length = descriptor.Length;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.X = descriptor.OriginX;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Y = descriptor.OriginY;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Origin.Z = descriptor.OriginZ;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CalibrationMatrix = descriptor.CalMatrix;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount = descriptor.Corners.Length;
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).CornerCount/3
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).X = descriptor.Corners( i*3-2 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Y = descriptor.Corners( i*3-1 );
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Corner( i ).Z = descriptor.Corners( i*3 );
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).PlateType = descriptor.PlateType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelDataType = descriptor.ChannelDataType;
+						modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount = descriptor.ChannelCount;
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = 1 : modelDescription.ForcePlate( modelDescription.ForcePlateCount ).ChannelCount
+							modelDescription.ForcePlate( modelDescription.ForcePlateCount ).Channel( i ).Name = char( descriptor.ChannelNames( i ) );
+						<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> (descriptor.type == 4)
+						modelDescription.DeviceCount = modelDescription.DeviceCount + 1;
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> (descriptor.type == -1 || descriptor.type == 5)
+						modelDescription.CameraCount = modelDescription.CameraCount + 1;
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+						report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid asset type'</mwsh:strings> )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of markersets: '</mwsh:strings> , num2str( modelDescription.MarkerSetCount ) ] )
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of rigid bodies: '</mwsh:strings> , num2str( modelDescription.RigidBodyCount ) ] )
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of skeletons: '</mwsh:strings> , num2str( modelDescription.SkeletonCount ) ] )
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of force plates: '</mwsh:strings> , num2str( modelDescription.ForcePlateCount ) ] )
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of devices: '</mwsh:strings> , num2str( modelDescription.DeviceCount ) ] )
+				report( obj , [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'number of cameras: '</mwsh:strings> , num2str( modelDescription.CameraCount ) ] )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getModelDescription</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> frameOfMocapData = getFrame( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				frameOfMocapData = data;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getFrame</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> frameOfMetaData = getFrameMetaData( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">persistent</mwsh:keywords> data
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.CameraMidExposureTimestamp = data.CameraMidExposureTimestamp;
+				t.CameraDataReceivedTimestamp = data.CameraDataReceivedTimestamp;
+				t.TransmitTimestamp = data.TransmitTimestamp;
+				t.Recording = data.bRecording;
+				t.TrackingModelsChanged = data.bTrackingModelsChanged;
+				t.Timecode = data.Timecode;
+				t.TimecodeSubframe = data.TimecodeSubframe;
+				t.MarkerCount = data.nMarkers;
+				t.OtherMarkerCount = data.nOtherMarkers;
+				t.MarkerSetCount = data.nMarkerSets;
+				t.RigidBodyCount = data.nRigidBodies;
+				t.SkeletonCount = data.nSkeletons;
+				t.ForcePlateCount = data.nForcePlates;
+				t.DeviceCount = data.nDevices;
+				frameOfMetaData = t;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getFrameOfMetaData</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> frameOfLabeledMarkerData = getFrameLabeledMarker( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerCount = data.nMarkers;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = t.MarkerCount : -1 : 1
+					t.LabeledMarker( i ).AssetID = int16( bitshift( data.LabeledMarkers( i ).ID , -16 ) );
+					t.LabeledMarker( i ).MemberID = int16( bitshift ( bitshift( data.LabeledMarkers( i ).ID , 16 ) , -16 ) );
+					t.LabeledMarker( i ).X = data.LabeledMarkers( i ).x;
+					t.LabeledMarker( i ).Y = data.LabeledMarkers( i ).y;
+					t.LabeledMarker( i ).Z = data.LabeledMarkers( i ).z;
+					t.LabeledMarker( i ).Size = data.LabeledMarkers( i ).size;
+					<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.LabeledMarker( i ).Occluded = logical( bitget( data.LabeledMarkers( i ).parameters , 1 ) );</mwsh:comments>
+					t.LabeledMarker( i ).PointCloudSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 2 ) );
+					t.LabeledMarker( i ).AssetSolved = logical( bitget( data.LabeledMarkers( i ).parameters , 3 ) );
+					t.LabeledMarker( i ).AssetMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 4 ) );
+					t.LabeledMarker( i ).UnlabeledMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 5 ) );
+					t.LabeledMarker( i ).ActiveMarker = logical( bitget( data.LabeledMarkers( i ).parameters , 6 ) );
+					t.LabeledMarker( i ).Residual = data.LabeledMarkers( i ).residual;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				frameOfLabeledMarkerData = t;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getFrameLabeledMarker</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> frameOfMarkerSetData = getFrameMarkerSet( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+				data = obj.Client.GetLastFrameOfData(  );
+				t.Frame = data.iFrame;
+				t.Timestamp = data.fTimestamp;
+				t.MarkerSetCount = data.nMarkerSets;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = t.MarkerSetCount : -1 : 1
+					t.MarkerSet( i ).MarkerSetName = string( data.MarkerSets( i ).MarkerSetName );
+					t.MarkerSet( i ).MarkerCount = data.MarkerSets( i ).nMarkers;
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> j = t.MarkerSet( i ).MarkerCount : -1 : 1
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).AssetID = int16( bitshift( data.MarkerSets( i ).Markers( j ).ID , -16 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).MemberID = int16( bitshift ( bitshift( data.MarkerSets( i ).Markers( j ).ID , 16 ) , -16 ) );</mwsh:comments>
+						t.MarkerSet( i ).Marker( j ).X = data.MarkerSets( i ).Markers( j ).x;
+						t.MarkerSet( i ).Marker( j ).Y = data.MarkerSets( i ).Markers( j ).y;
+						t.MarkerSet( i ).Marker( j ).Z = data.MarkerSets( i ).Markers( j ).z;
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).Size = data.MarkerSets( i ).Markers( j ).size;</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).Occluded = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 1 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).PointCloudSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 2 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).AssetSolved = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 3 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).AssetMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 4 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).UnlabeledMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 5 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).ActiveMarker = logical( bitget( data.MarkerSets( i ).Markers( j ).parameters , 6 ) );</mwsh:comments>
+						<mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">%t.MarkerSet( i ).Marker( j ).Residual = data.MarkerSets( i ).Markers( j ).residual;</mwsh:comments>
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				frameOfMarkerSetData = t;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getFrameMarkerSet</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> enable( obj , eListenerIndex )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ~isnumeric( eListenerIndex ) || eListenerIndex &lt; 0 || eListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid index'</mwsh:strings> )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> obj.IsConnected == 0
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> eListenerIndex == 0
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> k = 1:obj.MaxListeners
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> isa( obj.Listener{ k ,  1} , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> ) &amp;&amp; obj.Listener{ k ,  1}.Enabled == false
+						obj.Listener{ k , 1  }.Enabled = true;
+						obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'listener enabled in slot: '</mwsh:strings> , num2str( k ) ] )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords>( isa( obj.Listener{ eListenerIndex , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> ) ) &amp;&amp; obj.Listener{ eListenerIndex , 1 }.Enabled == false
+					obj.Listener{ eListenerIndex , 1 }.Enabled = true;
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'listener enabled in slot: '</mwsh:strings> , num2str( eListenerIndex ) ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% enable</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> disable( obj , dListenerIndex );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ~isnumeric( dListenerIndex ) || dListenerIndex &lt; 0 || dListenerIndex &gt; obj.MaxListeners
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid index'</mwsh:strings> );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> obj.IsConnected == 0;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> dListenerIndex == 0
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> k = 1:obj.MaxListeners
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> isa( obj.Listener{ k , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings>  )&amp;&amp; obj.Listener{ k ,  1}.Enabled == true;
+						obj.Listener{ k }.Enabled = false;
+						obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'listener disabled in slot: '</mwsh:strings> , num2str( k ) ] )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords>( isa( obj.Listener{ dListenerIndex , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> ) ) &amp;&amp; obj.Listener{ dListenerIndex , 1 }.Enabled == true;
+					obj.Listener{ dListenerIndex , 1 }.Enabled = false;
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'listener disabled in slot: '</mwsh:strings> , num2str( dListenerIndex ) ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% disable</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> startRecord( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'StartRecording'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% startRecord</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> stopRecord( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'StopRecording'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% stopRecord</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> cycleRecord( obj , iterations , duration , delay )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( isnumeric( iterations ) &amp;&amp; isnumeric( duration ) &amp;&amp; isnumeric( delay ) );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = 1:iterations
+					pause( delay );
+					obj.startRecord;
+					pause( duration );
+					obj.stopRecord;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% cycleRecord</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> liveMode( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'LiveMode'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% liveMode</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> editMode( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'EditMode'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% editMode</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> startPlayback( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'TimelinePlay'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% startPlayback</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> stopPlayback( obj )
+			obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'TimelineStop'</mwsh:strings> );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% stopPlayback</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setPlaybackStartFrame( obj , startFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetPlaybackStartFrame,'</mwsh:strings> , num2str( startFrame ) ] );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setPlaybackStartFrame</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setPlaybackEndFrame( obj , endFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetPlaybackStopFrame,'</mwsh:strings> , num2str( endFrame ) ] );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setPlaybackEndFrame</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setPlaybackLooping( obj , val )
+			obj.sendMessageAndWait( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetPlaybackLooping,'</mwsh:strings> , num2str( val ) ] );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% stopPlaybackLooping</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setPlaybackCurrentFrame( obj , currentFrame )
+			obj.sendMessageAndWait( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetPlaybackCurrentFrame,'</mwsh:strings> , num2str( currentFrame ) ] );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% stopPlaybackLooping</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetRecordTakeName,'</mwsh:strings> , name ) );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setTakeName</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setPlaybackTakeName( obj , name )
+			obj.sendMessageAndWait( strcat( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetPlaybackTakeName,'</mwsh:strings> , name ) );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setPlaybackTakeName</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setCurrentSession( obj , name )
+            obj.sendMessageAndWait( strcat(<mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'SetCurrentSession,'</mwsh:strings> , name) );
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setCurrentSession</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> getMode( obj )
+			[ bytearray , rc ] = obj.sendMessageAndWait( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'CurrentMode'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> rc == 0
+				state = bytearray(1);
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( state == 0 )
+					obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Live'</mwsh:strings>;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( state == 1 )
+					obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Recording'</mwsh:strings>;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">elseif</mwsh:keywords> ( state == 2 )
+					obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Edit'</mwsh:strings>;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">' '</mwsh:strings>;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'mode: '</mwsh:strings> , lower( obj.Mode ) ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.Mode = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">' '</mwsh:strings>;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getServerState</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> disconnect( obj )
+			obj.disable( 0 );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> k = 1 : obj.MaxListeners
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> isa( obj.Listener{ k , 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'event.listener'</mwsh:strings> )
+					delete( obj.Listener{ k , 1 } )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			obj.Listener{ obj.MaxListeners , 1 } = [  ];
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( isempty( obj.Client ) == 0 )
+				obj.Client.Uninitialize;
+				obj.Client = [  ];
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 )
+					report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'disconnecting'</mwsh:strings> );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				obj.IsConnected = 0;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% disconnect</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> delete( obj )
+			obj.disconnect
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% delete - destructor</mwsh:comments>
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% methods ( Access = public )</mwsh:comments>
+
+
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">methods</mwsh:keywords> ( Access = private )
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> getLastAssemblyPath( obj )
+			pathtomfile = mfilename( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'fullpath'</mwsh:strings> );
+			mfile = mfilename(  );
+			mfilenamelength = length( mfile );
+			foldertomfile = pathtomfile( 1 : end-mfilenamelength );
+			obj.LastAssemblyPathFile = strcat( foldertomfile , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'assemblypath.txt'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( exist( obj.LastAssemblyPathFile , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'file'</mwsh:strings> ) == 2 )
+				assemblypath = textread( obj.LastAssemblyPathFile , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'%s'</mwsh:strings> );
+				assemblypath = strjoin( assemblypath );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords>( exist( assemblypath , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'file'</mwsh:strings> ) == 2)
+					obj.AssemblyPath = assemblypath;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getLastAssemblyPath</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> getAssemblies( obj )
+			obj.IsAssemblyLoaded = 0;
+			obj.Assembly = [  ];
+			obj.AssemblyVersion = [  ];
+			domain = System.AppDomain.CurrentDomain;
+			assemblies = domain.GetAssemblies;
+			assembly{ assemblies.Length , 1 } = [  ];
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">for</mwsh:keywords> i = 1:assemblies.Length
+				assembly{ i } = assemblies.Get( i-1 );
+				obj.Assembly{ i } = char( assembly{ i }.FullName );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( strncmp ( obj.Assembly{ i } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'NatNetML'</mwsh:strings> , 8 ) )
+					aver = regexp( obj.Assembly{ i } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'\d+'</mwsh:strings> , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'match'</mwsh:strings> );
+					obj.AssemblyVersion = strcat( aver{ 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'.'</mwsh:strings> , aver{ 2 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'.'</mwsh:strings> , aver{ 3 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'.'</mwsh:strings> , aver{ 4 } );
+					obj.IsAssemblyLoaded = 1;
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% getAssemblies</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> addAssembly( obj )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( exist( obj.AssemblyPath , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'file'</mwsh:strings> ) == 2 )
+				[ ~ ] = NET.addAssembly( obj.AssemblyPath );
+				obj.IsAssemblyLoaded = 1;
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.IsAssemblyLoaded = 0;
+				report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'failed to add NatNetML.dll assembly'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% addAssembly</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> setAssemblyPath( obj )
+			[ name , path ] =	uigetfile( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'*.dll'</mwsh:strings> , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'Select the NatNetML.dll assembly - NatNetLib.dll is a dependency'</mwsh:strings> );
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( strcmpi( name , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'NatNetML.dll'</mwsh:strings>) == 1 )
+				assemblyPath = strcat( path , name );
+				textAssemblyPath = strrep( assemblyPath , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'\'</mwsh:strings> , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'\\'</mwsh:strings> );
+				fileid = fopen( obj.LastAssemblyPathFile , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'wt'</mwsh:strings>);
+				fprintf( fileid , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'%s'</mwsh:strings> , assemblyPath );
+				fclose( fileid );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsAssemblyLoaded == 0 )
+					obj.AssemblyPath = assemblyPath;
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'defined assembly path: '</mwsh:strings> , textAssemblyPath ] )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.report( [ <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'redefined assembly path: '</mwsh:strings> , textAssemblyPath ] )
+					obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'restart matlab to apply the changes'</mwsh:strings> )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid assembly path in function setAssemblyPath'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% setAssemlbyPath</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> report( obj , message )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsReporting == 1 )
+				ctime = strsplit( num2str( clock ) );
+				disp( sprintf ( [ ctime{ 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'/'</mwsh:strings> , ctime{ 2 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'/'</mwsh:strings> , ctime{ 3 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'  '</mwsh:strings> , ctime{ 4 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">':'</mwsh:strings> , ctime{ 5 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">':'</mwsh:strings> , ctime{ 6 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'  '</mwsh:strings> , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'natnet - '</mwsh:strings> , message ] ) )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% report</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> validIP = checkip( obj , value )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( ischar( value ) &amp;&amp; length( value ) &lt; 16 &amp;&amp; length( value ) &gt; 6 )
+				val = strsplit( value , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'.'</mwsh:strings> );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( length( val ) == 4 )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> all( isstrprop( val{ 1 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'digit'</mwsh:strings> ) ) &amp;&amp; all( isstrprop( val{ 2 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'digit'</mwsh:strings> ) )<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">...</mwsh:keywords>
+							&amp;&amp; all( isstrprop( val{ 3 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'digit'</mwsh:strings> ) ) &amp;&amp; all( isstrprop( val{ 4 } , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'digit'</mwsh:strings> ) )<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">...</mwsh:keywords>
+							&amp;&amp; length( val{ 1 } ) &lt; 4 &amp;&amp; length( val{ 2 } ) &lt; 4 &amp;&amp;  length( val{ 3 } ) &lt; 4 &amp;&amp; length( val{ 4 } ) &lt; 4 <mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">...</mwsh:keywords>
+							&amp;&amp; ~isempty( val{ 1 } ) &amp;&amp; ~isempty( val{ 2 } ) &amp;&amp;  ~isempty( val{ 3 } ) &amp;&amp; ~isempty( val{ 4 } ) <mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">...</mwsh:keywords>
+							&amp;&amp; str2double( val{ 1 } ) &lt; 256 &amp;&amp; str2double( val{ 2 } ) &lt; 256 &amp;&amp; str2double( val{ 3 } ) &lt; 256 &amp;&amp; str2double( val{ 4 } ) &lt; 256 <mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">...</mwsh:keywords>
+							&amp;&amp; str2double( val{ 1 } ) &gt;= 0  &amp;&amp; str2double( val{ 2 } ) &gt;= 0 &amp;&amp; str2double( val{ 3 } ) &gt;= 0 &amp;&amp; str2double( val{ 4 } ) &gt;= 0
+						validIP = value;
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+						report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+						validIP = [  ];
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+					validIP = [  ];
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				report( obj , <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'invalid string for ip address (e.x. 127.0.0.1)'</mwsh:strings> )
+				validIP = [  ];
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% validIP</mwsh:comments>
+
+
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">function</mwsh:keywords> [ bytearray , rc ] = sendMessageAndWait( obj , cmd )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( obj.IsConnected == 1 );
+				[ bytearray , rc ] = obj.Client.SendMessageAndWait( cmd );
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">if</mwsh:keywords> ( rc == 0 )
+					<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">return</mwsh:keywords>
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+					obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'command failed due to an unknown error'</mwsh:strings> )
+				<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">else</mwsh:keywords>
+				bytearray = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">''</mwsh:strings>;
+				rc = <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">''</mwsh:strings>;
+				obj.report( <mwsh:strings xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">'connection not established'</mwsh:strings> )
+			<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords>
+		<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% sendMessageAndWait</mwsh:comments>
+	<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% methods ( Access = private )</mwsh:comments>
+<mwsh:keywords xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">end</mwsh:keywords> <mwsh:comments xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">% classdef natnet &lt; handle</mwsh:comments>
+</programlisting><screen><computeroutput><emphasis>
+ans = 
+
+  natnet with properties:
+
+          ClientIP: '127.0.0.1'
+    ConnectionType: 'Multicast'
+            HostIP: '127.0.0.1'
+       IsReporting: 0
+       IsConnected: 0
+              Mode: ' '
+           Version: ' '
+         FrameRate: 0
+
+</emphasis></computeroutput></screen></section><literallayout><emphasis>
+Published with MATLAB® R2023b</emphasis></literallayout></article>
