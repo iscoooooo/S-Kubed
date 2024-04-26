@@ -446,7 +446,7 @@ app.STATUSLabel_3.Text = 'Experiment Complete...';
 
 % X or U Value Plots (Translational)
 if movementArray(1) > 0 || movementArray(1) < 0
-    
+
     plot(app.PlotX_2,xVals(5:end), firstPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
     plot(app.PlotX_2,xVals(5:end), firstHexArray(5:end), 'LineWidth',1,'Color','r')
@@ -502,7 +502,7 @@ end
 
 % Z or W Value Plots (Translational vs. Rotational)
 if movementArray(3) > 0 || movementArray(3) < 0
-  
+
     plot(app.PlotZ_2,xVals(5:end), thirdPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
     plot(app.PlotZ_2,xVals(5:end), thirdHexArray(5:end), 'LineWidth',1,'Color','r')
@@ -530,7 +530,7 @@ if movementArray(3) > 0 || movementArray(3) < 0
 end
 
 for i = 1:length(absoluteValuePlot1)
-    totalPercError(i) = norm([absoluteValuePlot1(i) absoluteValuePlot2(i), absoluteValuePlot3(i)]);
+    totalPercError(i) = (absoluteValuePlot1(i) + absoluteValuePlot2(i) + absoluteValuePlot3(i))/3;
 end
 
 app.Label_7.Text = [num2str(min(totalPercError)), '%'];

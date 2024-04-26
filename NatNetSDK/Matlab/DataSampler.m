@@ -103,19 +103,18 @@ clc; close all; clearvars -except C887 Controller devicesTcpIp ip matlabDriverPa
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Program Setup %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-sampleSize = 50;
-
-
-
-% To be Looped
+sampleSize = 50; % # of times to iterate both codes
 
 avgErrorArray_ROT = zeros(length(sampleSize));
 avgErrorArray_TRA = zeros(length(sampleSize));
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%% Program Iteration %%%%%%%%%%%%%%%%%%%%%%%% %%
 
 for w = 1:length(sampleSize)
 
     %%%%%%%%%%%%%%%%%% START OF ROTATIONAL MOTION %%%%%%%%%%%%%%%%%%%
 
+    disp('Running Rotational Code...')
     uDist = (rand() * 18) - 9;
     if uDist > 9 || uDist < -9
         movementArray = [uDist, 0, 0];
@@ -128,7 +127,7 @@ for w = 1:length(sampleSize)
         movementArray = [uDist, vDist, wDist];
     end
 
-    % Establish Initial Positions as read by Motive 
+    % Establish Initial Positions as read by Motive
     InitialU = (OptiTrak_Data(obj,'U'))/10;
     InitialV = (OptiTrak_Data(obj,'V'))/10;
     InitialW = (OptiTrak_Data(obj,'W'))/10;
@@ -303,47 +302,233 @@ for w = 1:length(sampleSize)
     absoluteValuePlotW = zeros(1, n);
 
     for i = 1:length(absoluteValuePlot1)
-        totalPercError(i) = norm([absoluteValuePlot1(i) absoluteValuePlot2(i), absoluteValuePlot3(i)]);
+        totalPercError(i) = (absoluteValuePlot1(i) + absoluteValuePlot2(i) + absoluteValuePlot3(i))/3;
     end
 
     % Save Values to Looped Matrix
-    avgErrorArray_ROT(w) = (totalPercError);
+    avgErrorArray_ROT(w) = mean(totalPercError);
 
 
     %%%%%%%%%%%%%%%%%% END OF ROTATIONAL MOTION %%%%%%%%%%%%%%%%%%%
- 
-  
 
+    % Re-Center Hexapod without FRF
+    C887.MOV('X',0)
+    C887.MOV('Y',0)
+    C887.MOV('Z',0)
+    pause(2)
 
-
-
-
-
-
-
-
-
-
+    disp('Rotational Code Complete. Continuing with Translational...')
+    pause(1)
 
     %%%%%%%%%%%%%%%% START OF TRANSLATIONAL MOTION %%%%%%%%%%%%%%%%
 
+    xDist = (rand() * 100) - 50;
+    if xDist > 40 || xDist < -40
+        movementArray = [xDist, 0, 0];
+    elseif xDist <= 40 && xDist > 17 || xDist < -17 && xDist >= -40
+        yDist = (rand() * 80) - 40;
+        movementArray = [xDist, yDist, 0];
+    elseif xDist <= 17 || xDist <= -17
+        yDist = (rand() * 34) - 17;
+        zDist = (rand() * 34) - 17;
+        movementArray = [xDist, yDist, zDist];
+    end
 
+    % Establish Initial Positions as read by Motive
+    InitialX = (OptiTrak_Data(obj,'X'))/10;
+    InitialY = (OptiTrak_Data(obj,'Y'))/10;
+    InitialZ = (OptiTrak_Data(obj,'Z'))/10;
 
+    DesiredX = 0;
+    DesiredY = 0;
+    DesiredZ = 0;
 
+    % Adjust desired positions for any initial offset
+    displacementX = DesiredX - InitialX;
+    displacementY = DesiredY - InitialY;
+    displacementZ = DesiredZ - InitialZ;
 
+    % Update current position to the initial position
+    CurrentX = abs(InitialX);
+    CurrentY = abs(InitialY);
+    CurrentZ = abs(InitialZ);
 
+    % Compute Error at initial position
+    xError = DesiredX - movementArray(1);
+    yError = DesiredY - movementArray(2);
+    zError = DesiredZ - movementArray(3);
 
+    fprintf('\nThe initial error prior to movement is: \n')
+    fprintf('X-Error: [%0.3f]  Y-Error: [%0.3f]  Z-Error: [%0.3f]\n\n',xError,yError,zError)
 
+    % Initialize Arrays
+    xPositionArray = zeros(); yPositionArray = zeros(); zPositionArray = zeros();
+    xHexaPosArray = zeros(); yHexaPosArray = zeros(); zHexaPosArray = zeros();
+    stepArray = zeros();
+    timeArray = zeros();
+    xErrorArray = zeros(); yErrorArray = zeros(); zErrorArray = zeros();
+    normPosArray = zeros();
+    normHexArray = zeros();
 
+    absoluteValuePlot1 = zeros(); absoluteValuePlot2 = zeros(); absoluteValuePlot3 = zeros();
+    absoluteValuePlotU = zeros(); absoluteValuePlotV = zeros(); absoluteValuePlotW = zeros();
 
+    %%% Perturbing Hexapod Before Moving to Origin
+    fprintf('Perturbing Hexapod...')
+    C887.MOV('X', movementArray(1));
+    C887.MOV('Y', movementArray(2));
+    C887.MOV('Z', movementArray(3));
+    pause(5)
 
+    unit = 'mm';
+    syms x y z
+    axes = [x,y,z];
 
+    % Reset iterator
+    n = 1;
+    tic;
+    Error = [xError, yError, zError];
 
+    while abs(Error(1)) > 0.25 && abs(Error(2)) > 0.25 && abs(Error(3)) > 0.25 ||...
+            abs(Error(1)) > 0.25 && abs(Error(2)) > 0.5 && abs(Error(3)) < 0.5 ||...
+            abs(Error(1)) > 0.25 && abs(Error(2)) < 0.5 && abs(Error(3)) < 0.5
 
+        CurrentX = OptiTrak_Data(obj, 'X');
+        CurrentY = OptiTrak_Data(obj, 'Y');
+        CurrentZ = OptiTrak_Data(obj, 'Z');
 
+        if xError >= 0.25
+            xError = DesiredX - CurrentX;
+        elseif xError <= -0.25
+            xError = DesiredX + CurrentX;
+        end
 
+        if yError >= 0.25
+            yError = DesiredY - CurrentY;
+        elseif yError <= -0.25
+            yError = DesiredY + CurrentY;
+        end
 
+        if zError >= 0.25
+            zError = DesiredZ - CurrentZ;
+        elseif zError <= -0.25
+            zError = DesiredZ + CurrentZ;
+        end
 
+        xPositionArray = [xPositionArray, CurrentX];
+        yPositionArray = [yPositionArray, CurrentY];
+        zPositionArray = [zPositionArray, CurrentZ];
 
+        CurrentTime = round(toc, 2);
+        timeArray = [timeArray, CurrentTime];
+        stepArray = [stepArray, n];
+
+        CurrentX = round(CurrentX, 2);
+        CurrentY = round(CurrentY, 2);
+        CurrentZ = round(CurrentZ, 2);
+
+        DesiredX = round(DesiredX, 2);
+        DesiredY = round(DesiredY, 2);
+        DesiredZ = round(DesiredZ, 2);
+
+        xError = round(xError, 2);
+        yError = round(yError, 2);
+        zError = round(zError, 2);
+
+        HexaPosX = round(C887.qPOS('X'), 2);
+        HexaPosY = round(C887.qPOS('Y'), 2);
+        HexaPosZ = round(C887.qPOS('Z'), 2);
+
+        tableVals = table(n', CurrentTime', xError', yError', zError', CurrentX', CurrentY', CurrentZ', HexaPosX', HexaPosY', HexaPosZ', DesiredX', DesiredY', DesiredZ');
+        tableVals.Properties.VariableNames = {'Step', 'Time', 'X-Err', 'Y-Err', 'Z-Err', 'Pos-X', 'Pos-Y', 'Pos-Z', 'Hex-X', 'Hex-Y', 'Hex-Z', 'Des-X', 'Des-Y', 'Des-Z'};
+        disp(tableVals)
+
+        xErrorArray = [xErrorArray, xError];
+        yErrorArray = [yErrorArray, yError];
+        zErrorArray = [zErrorArray, zError];
+
+        xHexaPosArray = [xHexaPosArray, HexaPosX];
+        yHexaPosArray = [yHexaPosArray, HexaPosY];
+        zHexaPosArray = [zHexaPosArray, HexaPosZ];
+
+        normPos = norm([xError, yError, zError]);
+        normHex = norm([HexaPosX, HexaPosY, HexaPosZ]);
+
+        normPosArray = [normPosArray, normPos];
+        normHexArray = [normHexArray, normHex];
+
+        if xError >= 0.5
+            C887.MOV('X', 0.03*n)
+        elseif xError <= -0.5
+            C887.MOV('X', -0.03*n)
+        end
+
+        if yError >= 0.5
+            C887.MOV('Y', 0.03*n)
+        elseif yError <= -0.5
+            C887.MOV('Y', -0.03*n)
+        end
+
+        if zError >= 0.5
+            C887.MOV('Z', 0.03*n)
+        elseif zError <= -0.5
+            C887.MOV('Z', -0.03*n)
+        end
+
+        n = n+1;
+        if abs(xError) < 0.5 && abs(yError) < 0.5 && abs(zError) < 0.5
+            break;
+        end
+
+    end
+
+    %%% Calculating Angular Velocity / Velocity %%%
+    timeVel = (timeArray(1:end-1) + timeArray(2:end)) / 2;
+    posVelocity = velocityCalc(xPositionArray, yPositionArray, zPositionArray, timeArray);
+    hexVelocity = velocityCalc(xHexaPosArray, yHexaPosArray, zHexaPosArray, timeArray);
+    velTitle = 'Average Velocity vs. Time';
+    velMethod = 'Velocity (mm/s)';
+
+    %%% Adjusting Values for Plotting %%%
+    xVals = timeArray;
+    method = 'Time (s)';
+    firstPosArray = xPositionArray;
+    firstHexArray = xHexaPosArray;
+    secondPosArray = yPositionArray;
+    secondHexArray = yHexaPosArray;
+    thirdPosArray = zPositionArray;
+    thirdHexArray = zHexaPosArray;
+
+    absoluteValuePlot1 = zeros(1, n);
+    absoluteValuePlot2 = zeros(1, n);
+    absoluteValuePlot3 = zeros(1, n);
+
+    absoluteValuePlotU = zeros(1, n);
+    absoluteValuePlotV = zeros(1, n);
+    absoluteValuePlotW = zeros(1, n);
+
+    for i = 1:length(absoluteValuePlot1)
+        totalPercError(i) = (absoluteValuePlot1(i) + absoluteValuePlot2(i) + absoluteValuePlot3(i))/3;
+    end
+
+    % Save Values to Looped Matrix
+    avgErrorArray_TRA(w) = mean(totalPercError);
 end
+
+%% %%%%%%%%%%%%%%%%%%% Display Volume-Sample Results %%%%%%%%%%%%%%%%%%% %%
+
+figure(1)
+plot(sampleSize, avgErrorArray_ROT,'Color','r')
+hold on
+plot(sampleSize, avgErrorArray_TRA,'Color','b')
+grid on
+hold off
+title('Error Analysis for n Samples')
+legend on
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% End of Program %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 

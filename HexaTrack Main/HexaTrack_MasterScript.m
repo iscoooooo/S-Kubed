@@ -1,10 +1,16 @@
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                                S-Kubed 2024                             %
-%             Main Script that Integrates Hexapod & OptiTrack Sensors     %
+%                                                                         %
+%           Main Script that Integrates Hexapod & OptiTrack Sensors,      %
+%           & performs a basic perturbation-correction experiment.        %
+%                                                                         %
 %                   Written by Andre Turpin & Matt Portugal               %
 %                                                                         %
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%% Documentation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%% Documentation %%%%%%%%%%%%%%%%%%%%%%%%%%  %%
 %                                                                         %
 %                              File Dependencies:                         %
 %                                                                         %
@@ -20,9 +26,12 @@
 %                Additionally, the Motive motion-tracking software        %
 %                uses a data-streaming server, "NatNet" which is          %
 %        required to be setup via an SDK prior to running this program.   %
-
-%% 
+%                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%  Main Program %%%%%%%%%%%%%%%%%%%%%%%%%%  %%
 
 clc; close all; clearvars -except C887 Controller devicesTcpIp ip matlabDriverPath port stageType use_TCPIP_Connection
 
@@ -47,5 +56,10 @@ else
     return
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% End of Program %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

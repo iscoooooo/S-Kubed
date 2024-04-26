@@ -1,59 +1,87 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%% Rotational-Motion Sub-Program %%%%%%%%%%%%%%%%%%%%%
+
+%% %%%%%%%%%%%%%%%%%%%%%%  Sub-Program Description %%%%%%%%%%%%%%%%%%%%  %%
+%                                                                         %
+%            Program that is called by "HexaTrack_MasterScript.m"         %
+%                                                                         %
+%               Current capabilities consist of the following:            %
+%      Initialize and track the position of a test article (typically     %
+%      a SmallSat) through the use of sensor feedback from OptiTrack      %
+%      cameras. The initial position of this rigid body represent an      %
+%      arbitary point of a nominal orbital trajectory. Following this     %
+%      initialization, the program will apply a perturbation              %
+%      (randomized or user-defined) which will change the test            %
+%      article's attitude and position with respect to the initial        %
+%      nominal trajectory point. Using sensor feedback from the           %
+%      cameras, the program will move the test article back to the        %
+%      initial position through the means of an actuator (Hexapod)        %
+%      in steps, calculating displacement continuously until the          %
+%      initial position is reached. Additionally, the sensor feedback     %
+%      is compared to the test article's true position for error          %
+%      analysis.                                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%  Main Program %%%%%%%%%%%%%%%%%%%%%%%%%%  %%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Program Setup %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+chosenDynamics = 'ROT';
 app = HexaTrack_GUI;
+app.TabGroup.SelectedTab = app.RotationalTab;
 pause(2)
+Rotational = 'Y';
 
-% Set the active tab to app.TranslationalTab
-app.TabGroup.SelectedTab = app.TranslationalTab;
-Translational = 'Y';
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% Initialize Perturbation Values %%%%%%%%%%%%%%%%%%%%%
 
 PerturbationType = 0;
 UserInputX = 0;
 UserInputY = 0;
 UserInputZ = 0;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%% Prompt Perturbation Type Selection through GUI %%%%%%%%%%%%%
 
 while PerturbationType == 0
     pause(1)
-    app.STATUSLabel_3.FontSize = 14;
-    app.STATUSLabel_3.Text = 'Waiting for Perturbation...';
+    app.STATUSLabel.FontSize = 14;
+    app.STATUSLabel.Text = 'Waiting for Perturbation...';
     disp('Waiting for Perturbation Type selection...')
-    app.Lamp_3.Color = 'r';
+    app.Lamp.Color = 'r';
     drawnow;
 end
 
 if PerturbationType == 1
     Perturbation = 'Random'; % 'User' or 'Random'
-    app.STATUSLabel_3.FontSize = 14;
-    app.STATUSLabel_3.Text = 'Perturbation Selected...';
+    app.STATUSLabel.FontSize = 14;
+    app.STATUSLabel.Text = 'Perturbation Selected...';
 elseif PerturbationType == 2
     Perturbation = 'User';
-    app.STATUSLabel_3.FontSize = 14;
-    app.STATUSLabel_3.Text = 'Perturbation Selected...';
+    app.STATUSLabel.FontSize = 14;
+    app.STATUSLabel.Text = 'Perturbation Selected...';
     pause(2)
     drawnow;
     while UserInputX == 0 && UserInputY == 0 && UserInputZ == 0
         pause(1)
-        app.STATUSLabel_3.Text = 'Waiting for Input...';
+        app.STATUSLabel.Text = 'Waiting for Input...';
         disp('Waiting for Input')
         disp(UserInputX)
-        app.Lamp_3.Color = 'b';
+        app.Lamp.Color = 'b';
     end
-    app.STATUSLabel_3.Text = 'Perturbation Selected...';
-    app.Lamp_3.Color = 'g';
+    app.STATUSLabel.Text = 'Perturbation Selected...';
+    app.Lamp.Color = 'g';
 end
 
-app.Lamp_3.Color = 'g';
-app.Label_8.Text = Perturbation;
+app.Lamp.Color = 'g';
+app.Label_2.Text = Perturbation;
 drawnow;
 
-%%%%%%%%%%%%%%%%%%% Hexapod Initialization %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%% Hexapod Initialization %%%%%%%%%%%%%%%%%%%%%%%%%
 
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = 'Checking Hexapod Connection...';
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Checking Hexapod Connection...';
 
 % Connect to Hexapod
 disp('Checking connection with Hexapod...');
@@ -78,10 +106,10 @@ else
     pause(9)
 end
 
-%%%%%%%%%%%%%%%%%%% NatNet Initialization %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Motive & NatNet Initialization %%%%%%%%%%%%%%%%%%%%
 
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = 'Initializing NatNet...';
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Initializing NatNet...';
 
 % Check if the Motive application is open
 
@@ -117,12 +145,11 @@ if (model.RigidBodyCount < 1)
     return
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Perturb Test Article %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%% User-Input Perturbation %%%%%%%%%%%%%%%%
 if strcmp(Translational,'Y') == true
+
+    % User-Input
     if strcmp(Perturbation,'User') == true
 
         xDist = UserInputX;
@@ -140,14 +167,13 @@ if strcmp(Translational,'Y') == true
         end
     end
 
-
-    %%%%%%%%%%%%%%%% Translational Randomized Perturbation %%%%%%%%%%%%%%%%
-
     pause(2)
+
+    % Randomized
     if strcmp(Perturbation,'Random') == true
         disp('Perturbing Randomly....')
-        app.STATUSLabel_3.FontSize = 14;
-        app.STATUSLabel_3.Text = 'Perturbing Hexapod...';
+        app.STATUSLabel.FontSize = 14;
+        app.STATUSLabel.Text = 'Perturbing Hexapod...';
 
         xDist = (rand() * 100) - 50;
         if xDist > 40 || xDist < -40
@@ -163,7 +189,7 @@ if strcmp(Translational,'Y') == true
     end
 end
 
-%%%%%%%%%%%%%%%% Establish Initial Positions as read by Motive %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%% Establish Initial Positions as read by Motive %%%%%%%%%%%%%%
 
 InitialX = (OptiTrak_Data(obj,'X'))/10;
 InitialY = (OptiTrak_Data(obj,'Y'))/10;
@@ -172,8 +198,7 @@ InitialU = (OptiTrak_Data(obj,'U'))/10;
 InitialV = (OptiTrak_Data(obj,'V'))/10;
 InitialW = (OptiTrak_Data(obj,'W'))/10;
 
-
-%%%%%%%%%%%%%%%% Start Condition Loop %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% Setup Perturbation-Correction %%%%%%%%%%%%%%%%%%%%%%
 
 % Define the desired positions
 DesiredX = 0;
@@ -204,6 +229,11 @@ if strcmp(Translational, 'Y') == true
     xError = DesiredX - movementArray(1);
     yError = DesiredY - movementArray(2);
     zError = DesiredZ - movementArray(3);
+elseif strcmp(Rotational, 'Y') == true
+    uError = DesiredU - movementArray(1);
+    vError = DesiredV - movementArray(2);
+    wError = DesiredW - movementArray(3);
+end
 
 if strcmp(Translational, 'Y') == true
     fprintf('\nThe initial error prior to movement is: \n')
@@ -232,25 +262,29 @@ normHexArray = zeros();
 absoluteValuePlot1 = zeros(); absoluteValuePlot2 = zeros(); absoluteValuePlot3 = zeros();
 absoluteValuePlotU = zeros(); absoluteValuePlotV = zeros(); absoluteValuePlotW = zeros();
 
+%%%%%%%%%%%%%%%%%%% Apply Perturbation to Test Article %%%%%%%%%%%%%%%%%%%%
 
-%%% Perturbing Hexapod Before Moving to Origin
 fprintf('Perturbing Hexapod...')
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = 'Perturbing Hexapod...';
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Perturbing Hexapod...';
 if strcmp(Translational, 'Y') == true
     C887.MOV('X', movementArray(1));
     C887.MOV('Y', movementArray(2));
     C887.MOV('Z', movementArray(3));
+elseif strcmp(Rotational, 'Y') == true
+    C887.MOV('U', movementArray(1));
+    C887.MOV('V', movementArray(2));
+    C887.MOV('W', movementArray(3));
 end
 pause(5)
 
-%%% Moving Back to Origin
 
-% Translational -----------------------------------------------------------
+%%%%%%%%%% Correct Test Article Attitude from Perturbed State %%%%%%%%%%%%%
+
 fprintf('Moving Back to Origin...')
 if strcmp(Translational, 'Y') == true
-    app.STATUSLabel_3.FontSize = 14;
-    app.STATUSLabel_3.Text = 'Correcting back to Origin...';
+    app.STATUSLabel.FontSize = 14;
+    app.STATUSLabel.Text = 'Correcting back to Origin...';
 
     unit = 'mm';
     syms x y z
@@ -355,10 +389,11 @@ if strcmp(Translational, 'Y') == true
     end
 end
 
-%%% Calculating Angular Velocity / Velocity %%%
 
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = 'Compiling Data...';
+%%%%%%%%%%%%%%%%%% Calculate Velocities [Linear & Angular] %%%%%%%%%%%%%%%%
+
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Compiling Data...';
 
 timeVel = (timeArray(1:end-1) + timeArray(2:end)) / 2;
 
@@ -374,9 +409,11 @@ elseif strcmp(Rotational, 'Y') == true
     velMethod = 'Angular Velocity (deg/s)';
 end
 
-%%% Adjusting Values for Plotting %%%
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = 'Plotting Results...';
+
+%%%%%%%%%%%%%%%%% Adjust Data for Plotting & Visualization %%%%%%%%%%%%%%%%
+
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Plotting Results...';
 if strcmp(Plot_Step, 'Y') == true
     xVals = stepArray;
     method = 'Step #';
@@ -409,158 +446,106 @@ absoluteValuePlotU = zeros(1, n);
 absoluteValuePlotV = zeros(1, n);
 absoluteValuePlotW = zeros(1, n);
 
-%%%%%%%%%%%%%%%% PLOT RESULTS IN TIME %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Plot Experiment Data %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-app.STATUSLabel_3.FontSize = 14;
-app.STATUSLabel_3.Text = '   ';
-% X or U Value Plots (Translational vs. Rotational)
+app.STATUSLabel.FontSize = 14;
+app.STATUSLabel.Text = 'Experiment Complete...';
+
+% X or U Value Plots (Rotational)
 if movementArray(1) > 0 || movementArray(1) < 0
-    %     subplot(4,2,1)
-    plot(app.PlotX_2,xVals(5:end), firstPosArray(5:end),'LineWidth',1,'Color','b')
+
+    plot(app.PlotX,xVals(5:end), firstPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
-    plot(app.PlotX_2,xVals(5:end), firstHexArray(5:end), 'LineWidth',1,'Color','r')
-    yline(app.PlotX_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    plot(app.PlotX,xVals(5:end), firstHexArray(5:end), 'LineWidth',1,'Color','r')
+    yline(app.PlotX,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
     if movementArray(1) < 0
-        legend(app.PlotX_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
+        legend(app.PlotX,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
     elseif movementArray(1) > 0
-        legend(app.PlotX_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
+        legend(app.PlotX,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
     end
-    title(app.PlotX_2,sprintf('OptiTrack vs Hexapod Position [%s]', axes(1)))
-    xlabel(app.PlotX_2,sprintf('%s', method))
-    ylabel(app.PlotX_2,sprintf('Position (%s)', unit))
-    grid(app.PlotX_2,"on")
+    title(app.PlotX,sprintf('OptiTrack vs Hexapod Position [%s]', axes(1)))
+    xlabel(app.PlotX,sprintf('%s', method))
+    ylabel(app.PlotX,sprintf('Position (%s)', unit))
+    grid(app.PlotX,"on")
 
     absoluteValuePlot1 = ((firstHexArray - firstPosArray)./firstHexArray) .* 100;
 
-    %     subplot(4,2,2)
-    plot(app.PlotErrorX_2,xVals(10:end),flip(absoluteValuePlot1(10:end)),'LineWidth',1,'Color',"#7E2F8E")
-    title(app.PlotErrorX_2,'Percentage Error for X')
-    xlabel(app.PlotErrorX_2,sprintf('%s', method))
-    ylabel(app.PlotErrorX_2,'Percent Error')
-    yline(app.PlotErrorX_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
-    grid(app.PlotErrorX_2,"on")
+    plot(app.PlotErrorX,xVals(10:end),flip(absoluteValuePlot1(10:end)),'LineWidth',1,'Color',"#7E2F8E")
+    title(app.PlotErrorX,'Percentage Error for X')
+    xlabel(app.PlotErrorX,sprintf('%s', method))
+    ylabel(app.PlotErrorX,'Percent Error')
+    yline(app.PlotErrorX,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    grid(app.PlotErrorX,"on")
 
 end
 
 % Y or V Value Plots (Translational vs. Rotational)
 if movementArray(2) > 0 || movementArray(2) < 0
-    %     subplot(4,2,3)
-    plot(app.PlotY_2,xVals(5:end), secondPosArray(5:end), 'LineWidth', 1, 'Color', 'b')
-    hold on;
-    plot(app.PlotY_2,xVals(5:end), secondHexArray(5:end), 'LineWidth', 1, 'Color', 'r')
-    yline(app.PlotY_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
-    if movementArray(2) < 0
-        legend(app.PlotY_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
-    elseif movementArray(2) > 0
-        legend(app.PlotY_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
-    end
-    title(app.PlotY_2,sprintf('OptiTrack vs Hexapod Position [%s]', axes(2)))
-    xlabel(app.PlotY_2,sprintf('%s', method))
-    ylabel(app.PlotY_2,sprintf('Position (%s)', unit))
-    grid(app.PlotY_2,"on")
 
+    plot(app.PlotY,xVals(5:end), secondPosArray(5:end), 'LineWidth', 1, 'Color', 'b')
+    hold on;
+    plot(app.PlotY,xVals(5:end), secondHexArray(5:end), 'LineWidth', 1, 'Color', 'r')
+    yline(app.PlotY,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    if movementArray(2) < 0
+        legend(app.PlotY,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
+    elseif movementArray(2) > 0
+        legend(app.PlotY,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
+    end
+    title(app.PlotY,sprintf('OptiTrack vs Hexapod Position [%s]', axes(2)))
+    xlabel(app.PlotY,sprintf('%s', method))
+    ylabel(app.PlotY,sprintf('Position (%s)', unit))
+    grid(app.PlotY,"on")
 
     absoluteValuePlot2 = ((secondHexArray - secondPosArray)./secondHexArray) .* 100;
 
-    %     subplot(4,2,4)
-    plot(app.PlotErrorY_2,xVals(10:end),flip(absoluteValuePlot2(10:end)),'LineWidth',1,'Color',"#7E2F8E")
-    title(app.PlotErrorY_2,'Percentage Error for Y')
-    xlabel(app.PlotErrorY_2,sprintf('%s', method))
-    ylabel(app.PlotErrorY_2,'Percent Error')
-    yline(app.PlotErrorY_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
-    grid(app.PlotErrorY_2,"on")
+    plot(app.PlotErrorY,xVals(10:end),flip(absoluteValuePlot2(10:end)),'LineWidth',1,'Color',"#7E2F8E")
+    title(app.PlotErrorY,'Percentage Error for Y')
+    xlabel(app.PlotErrorY,sprintf('%s', method))
+    ylabel(app.PlotErrorY,'Percent Error')
+    yline(app.PlotErrorY,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    grid(app.PlotErrorY,"on")
 
 end
 
 % Z or W Value Plots (Translational vs. Rotational)
 if movementArray(3) > 0 || movementArray(3) < 0
-    %     subplot(4,2,5)
-    plot(app.PlotZ_2,xVals(5:end), thirdPosArray(5:end),'LineWidth',1,'Color','b')
+
+    plot(app.PlotZ,xVals(5:end), thirdPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
-    plot(app.PlotZ_2,xVals(5:end), thirdHexArray(5:end), 'LineWidth',1,'Color','r')
-    yline(app.PlotZ_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    plot(app.PlotZ,xVals(5:end), thirdHexArray(5:end), 'LineWidth',1,'Color','r')
+    yline(app.PlotZ,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
     if movementArray(3) < 0
-        legend(app.PlotZ_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
+        legend(app.PlotZ,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southeast')
     elseif movementArray(3) > 0
-        legend(app.PlotZ_2,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
+        legend(app.PlotZ,'OptiTrack Position','Hexapod True Position', 'Origin', 'location', 'southwest')
     end
-    title(app.PlotZ_2,sprintf('OptiTrack vs Hexapod Position [%s]', axes(3)))
-    xlabel(app.PlotZ_2,sprintf('%s', method))
-    ylabel(app.PlotZ_2,sprintf('Position (%s)', unit))
-    grid(app.PlotZ_2,"on")
+    title(app.PlotZ,sprintf('OptiTrack vs Hexapod Position [%s]', axes(3)))
+    xlabel(app.PlotZ,sprintf('%s', method))
+    ylabel(app.PlotZ,sprintf('Position (%s)', unit))
+    grid(app.PlotZ,"on")
 
     absoluteValuePlot3 = ((thirdHexArray - thirdPosArray)./thirdHexArray) .* 100;
 
-    %     subplot(4,2,6)
-    plot(app.PlotErrorZ_2,xVals(10:end),flip(absoluteValuePlot3(10:end)),'LineWidth',1,'Color',"#7E2F8E")
-    title(app.PlotErrorZ_2,'Percentage Error for Z')
-    xlabel(app.PlotErrorZ_2,sprintf('%s', method))
-    ylabel(app.PlotErrorZ_2,'Percent Error')
-    yline(app.PlotErrorZ_2,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
+    plot(app.PlotErrorZ,xVals(10:end),flip(absoluteValuePlot3(10:end)),'LineWidth',1,'Color',"#7E2F8E")
+    title(app.PlotErrorZ,'Percentage Error for Z')
+    xlabel(app.PlotErrorZ,sprintf('%s', method))
+    ylabel(app.PlotErrorZ,'Percent Error')
+    yline(app.PlotErrorZ,0, 'linestyle', '- -', 'color', 'black', 'linewidth', 1.5);
     hold off
-    grid(app.PlotErrorZ_2,"on")
+    grid(app.PlotErrorZ,"on")
 
 end
 
 for i = 1:length(absoluteValuePlot1)
-    totalPercError(i) = norm([absoluteValuePlot1(i) absoluteValuePlot2(i), absoluteValuePlot3(i)]);
+    totalPercError(i) = (absoluteValuePlot1(i) + absoluteValuePlot2(i) + absoluteValuePlot3(i))/3;
 end
 
-app.Label_7.Text = [num2str(min(totalPercError)), '%'];
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function [vTotal] = velocityCalc(ax1, ax2, ax3, time)
-
-dx = diff(ax1);
-dy = diff(ax2);
-dz = diff(ax3);
-
-dt = diff(time);
-
-vx = dx ./ dt;
-vy = dy ./ dt;
-vz = dz ./ dt;
-
-vTotal = sqrt(vx.^2 + vy.^2 + vz.^2);
-
-end
-
-function [rigidBody_Pos] = OptiTrak_Data(obj,input_axis) %Pulls current position of indicated axis from Motive
-
-data = obj.getFrame;
-
-rigidBodyX= data.RigidBodies(1).x * 1000;
-rigidBodyY= data.RigidBodies(1).y * 1000;
-rigidBodyZ= data.RigidBodies(1).z * 1000;
-
-q = quaternion(data.RigidBodies(1).qw, data.RigidBodies(1).qx, ...
-    data.RigidBodies(1).qy, data.RigidBodies(1).qz);
-
-eulerAngles = q.EulerAngles('ZYX');
-
-rigidBodyU = eulerAngles(3)* 180/pi;
-rigidBodyV = eulerAngles(2)* 180/pi;
-rigidBodyW = eulerAngles(1)* 180/pi;
-
-switch input_axis
-
-    case 'X'
-        rigidBody_Pos = rigidBodyX;
-    case 'Y'
-        rigidBody_Pos = rigidBodyY;
-    case 'Z'
-        rigidBody_Pos = rigidBodyZ;
-    case 'U'
-        rigidBody_Pos = rigidBodyU;
-    case 'V'
-        rigidBody_Pos = rigidBodyV;
-    case 'W'
-        rigidBody_Pos = rigidBodyW;
-
-end
-
-end
+app.Label.Text = [num2str(min(totalPercError)), '%'];
 
 
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% End of Program %%%%%%%%%%%%%%%%%%%%%%%%%%%%%

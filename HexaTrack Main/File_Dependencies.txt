@@ -1,0 +1,11 @@
+Files that "HexaTrack_MasterScript.m" relies on:
+
+- "Rotational_Motion.m"
+- "Translational_Motion.m"
+- "HexaTrack_GUI.mlapp"
+- "OptiTrak_Data.m"
+- "Connection2Hexapod.m"
+- "natnet.m"
+- "quaternion.m"
+- "Rotational_GUI.png"
+- "Translational_GUI.png"

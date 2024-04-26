@@ -453,7 +453,7 @@ app.STATUSLabel.Text = 'Experiment Complete...';
 
 % X or U Value Plots (Rotational)
 if movementArray(1) > 0 || movementArray(1) < 0
-    
+
     plot(app.PlotX,xVals(5:end), firstPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
     plot(app.PlotX,xVals(5:end), firstHexArray(5:end), 'LineWidth',1,'Color','r')
@@ -481,7 +481,7 @@ end
 
 % Y or V Value Plots (Translational vs. Rotational)
 if movementArray(2) > 0 || movementArray(2) < 0
-    
+
     plot(app.PlotY,xVals(5:end), secondPosArray(5:end), 'LineWidth', 1, 'Color', 'b')
     hold on;
     plot(app.PlotY,xVals(5:end), secondHexArray(5:end), 'LineWidth', 1, 'Color', 'r')
@@ -509,7 +509,7 @@ end
 
 % Z or W Value Plots (Translational vs. Rotational)
 if movementArray(3) > 0 || movementArray(3) < 0
-    
+
     plot(app.PlotZ,xVals(5:end), thirdPosArray(5:end),'LineWidth',1,'Color','b')
     hold on;
     plot(app.PlotZ,xVals(5:end), thirdHexArray(5:end), 'LineWidth',1,'Color','r')
@@ -537,7 +537,7 @@ if movementArray(3) > 0 || movementArray(3) < 0
 end
 
 for i = 1:length(absoluteValuePlot1)
-    totalPercError(i) = norm([absoluteValuePlot1(i) absoluteValuePlot2(i), absoluteValuePlot3(i)]);
+    totalPercError(i) = (absoluteValuePlot1(i) + absoluteValuePlot2(i) + absoluteValuePlot3(i))/3;
 end
 
 app.Label.Text = [num2str(min(totalPercError)), '%'];
